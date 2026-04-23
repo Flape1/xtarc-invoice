@@ -54,22 +54,6 @@ function computePrice(item){
   return item.price||"";
 }
 
-function processSignature(dataUrl,cb){
-  const img=new Image();
-  img.onload=()=>{
-    const canvas=document.createElement("canvas");
-    canvas.width=img.width;canvas.height=img.height;
-    const ctx=canvas.getContext("2d");ctx.drawImage(img,0,0);
-    const id=ctx.getImageData(0,0,canvas.width,canvas.height);const d=id.data;
-    for(let i=0;i<d.length;i+=4){
-      const b=(d[i]+d[i+1]+d[i+2])/3;
-      if(b>180){d[i+3]=0;}else{d[i]=Math.round(d[i]*0.15);d[i+1]=Math.round(d[i+1]*0.15);d[i+2]=Math.round(d[i+2]*0.15);}
-    }
-    ctx.putImageData(id,0,0);cb(canvas.toDataURL("image/png"));
-  };
-  img.src=dataUrl;
-}
-
 /* ─── INVOICE DOCUMENT ──────────────────────────────────────────────────── */
 function Doc({inv,allCurrencies}){
   const cur=allCurrencies.find(c=>c.code===inv.currency)||allCurrencies[0];
@@ -334,63 +318,290 @@ function CurrencyModal({onAdd,onClose}){
   );
 }
 
-/* ─── SIGNATURE UPLOADER ────────────────────────────────────────────────── */
+/* ─── SIGNATURE UPLOADER + DRAW + TYPE ─────────────────────────────────── */
+function processSignature(dataUrl,cb){
+  const img=new Image();
+  img.onload=()=>{
+    const canvas=document.createElement("canvas");
+    canvas.width=img.width;canvas.height=img.height;
+    const ctx=canvas.getContext("2d");ctx.drawImage(img,0,0);
+    const id=ctx.getImageData(0,0,canvas.width,canvas.height);const d=id.data;
+    for(let i=0;i<d.length;i+=4){
+      const b=(d[i]+d[i+1]+d[i+2])/3;
+      if(b>180){d[i+3]=0;}else{d[i]=Math.round(d[i]*0.15);d[i+1]=Math.round(d[i+1]*0.15);d[i+2]=Math.round(d[i+2]*0.15);}
+    }
+    ctx.putImageData(id,0,0);cb(canvas.toDataURL("image/png"));
+  };
+  img.src=dataUrl;
+}
+
+// Draw pad component
+function DrawPad({onSave,onCancel}){
+  const canvasRef=useRef(null);
+  const drawing=useRef(false);
+  const lastPos=useRef({x:0,y:0});
+  const [isEmpty,setIsEmpty]=useState(true);
+
+  const getPos=(e,canvas)=>{
+    const rect=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/rect.width;
+    const scaleY=canvas.height/rect.height;
+    if(e.touches){
+      return{
+        x:(e.touches[0].clientX-rect.left)*scaleX,
+        y:(e.touches[0].clientY-rect.top)*scaleY,
+      };
+    }
+    return{x:(e.clientX-rect.left)*scaleX,y:(e.clientY-rect.top)*scaleY};
+  };
+
+  const startDraw=(e)=>{
+    e.preventDefault();
+    const canvas=canvasRef.current;
+    drawing.current=true;
+    lastPos.current=getPos(e,canvas);
+    setIsEmpty(false);
+  };
+  const draw=(e)=>{
+    e.preventDefault();
+    if(!drawing.current)return;
+    const canvas=canvasRef.current;
+    const ctx=canvas.getContext("2d");
+    const pos=getPos(e,canvas);
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current.x,lastPos.current.y);
+    ctx.lineTo(pos.x,pos.y);
+    ctx.strokeStyle="#18181b";
+    ctx.lineWidth=2.5;
+    ctx.lineCap="round";
+    ctx.lineJoin="round";
+    ctx.stroke();
+    lastPos.current=pos;
+  };
+  const endDraw=()=>{drawing.current=false;};
+
+  const clear=()=>{
+    const canvas=canvasRef.current;
+    canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+    setIsEmpty(true);
+  };
+
+  const save=()=>{
+    const canvas=canvasRef.current;
+    onSave(canvas.toDataURL("image/png"));
+  };
+
+  return(
+    <div>
+      <div style={{border:`1.5px solid ${C.gray200}`,borderRadius:"8px",overflow:"hidden",background:"#fafafa",marginBottom:"10px",position:"relative"}}>
+        <canvas ref={canvasRef} width={460} height={160}
+          style={{display:"block",width:"100%",height:"120px",cursor:"crosshair",touchAction:"none"}}
+          onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+          onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+        {isEmpty&&(
+          <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",
+            fontSize:"12px",color:C.gray300,pointerEvents:"none",userSelect:"none"}}>
+            Sign here
+          </div>
+        )}
+      </div>
+      <div style={{height:"1px",background:C.gray200,margin:"0 0 10px"}}/>
+      <div style={{display:"flex",gap:"6px"}}>
+        <button onClick={clear} style={{flex:1,padding:"6px 10px",border:`1px solid ${C.gray200}`,
+          borderRadius:"6px",background:C.white,color:C.gray600,fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>Clear</button>
+        <button onClick={onCancel} style={{flex:1,padding:"6px 10px",border:`1px solid ${C.gray200}`,
+          borderRadius:"6px",background:C.white,color:C.gray600,fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+        <button onClick={save} disabled={isEmpty} style={{flex:2,padding:"6px 10px",border:"none",
+          borderRadius:"6px",background:isEmpty?C.gray200:C.gray900,color:isEmpty?C.gray400:C.white,
+          fontSize:"12px",fontWeight:600,cursor:isEmpty?"default":"pointer",fontFamily:"inherit"}}>
+          Save Signature
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Type signature component
+function TypeSignature({name,onSave,onCancel}){
+  const [text,setText]=useState(name||"");
+  const [fontIdx,setFontIdx]=useState(0);
+  const canvasRef=useRef(null);
+
+  const fonts=[
+    {label:"Cursive",   family:"'Dancing Script', cursive"},
+    {label:"Elegant",   family:"'Great Vibes', cursive"},
+    {label:"Bold Sign", family:"'Pacifico', cursive"},
+    {label:"Handwritten",family:"'Caveat', cursive"},
+    {label:"Classic",   family:"'Satisfy', cursive"},
+  ];
+
+  // Render typed text to canvas and save
+  const save=()=>{
+    if(!text.trim())return;
+    const canvas=document.createElement("canvas");
+    canvas.width=460; canvas.height=140;
+    const ctx=canvas.getContext("2d");
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.font=`52px ${fonts[fontIdx].family}`;
+    ctx.fillStyle="#18181b";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.fillText(text,canvas.width/2,canvas.height/2);
+    onSave(canvas.toDataURL("image/png"));
+  };
+
+  return(
+    <div>
+      <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Great+Vibes&family=Pacifico&family=Caveat:wght@600&family=Satisfy&display=swap" rel="stylesheet"/>
+      <div style={{marginBottom:"10px"}}>
+        <input value={text} onChange={e=>setText(e.target.value)}
+          placeholder="Type your name…"
+          style={{...{width:"100%",boxSizing:"border-box",padding:"8px 12px",
+            border:`1.5px solid ${C.accent}`,borderRadius:"6px",
+            fontSize:"13px",color:C.gray900,outline:"none",fontFamily:"inherit"}}}/>
+      </div>
+      {/* Font picker */}
+      <div style={{display:"flex",gap:"6px",marginBottom:"12px",flexWrap:"wrap"}}>
+        {fonts.map((f,i)=>(
+          <button key={i} onClick={()=>setFontIdx(i)} style={{
+            padding:"4px 10px",borderRadius:"20px",
+            border:`1.5px solid ${i===fontIdx?C.accent:C.gray200}`,
+            background:i===fontIdx?C.accentL:C.white,
+            color:i===fontIdx?C.accent:C.gray600,
+            fontSize:"11px",fontWeight:600,cursor:"pointer",fontFamily:"inherit",
+            transition:"all 0.12s",
+          }}>{f.label}</button>
+        ))}
+      </div>
+      {/* Preview */}
+      {text.trim()&&(
+        <div style={{border:`1px solid ${C.gray100}`,borderRadius:"8px",background:C.gray50,
+          padding:"16px",textAlign:"center",marginBottom:"10px",minHeight:"64px",
+          display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <span style={{fontFamily:fonts[fontIdx].family,fontSize:"42px",color:C.gray900,lineHeight:1}}>
+            {text}
+          </span>
+        </div>
+      )}
+      <div style={{display:"flex",gap:"6px"}}>
+        <button onClick={onCancel} style={{flex:1,padding:"6px 10px",border:`1px solid ${C.gray200}`,
+          borderRadius:"6px",background:C.white,color:C.gray600,fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+        <button onClick={save} disabled={!text.trim()} style={{flex:2,padding:"6px 10px",border:"none",
+          borderRadius:"6px",background:!text.trim()?C.gray200:C.gray900,
+          color:!text.trim()?C.gray400:C.white,
+          fontSize:"12px",fontWeight:600,cursor:!text.trim()?"default":"pointer",fontFamily:"inherit"}}>
+          Use This Signature
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SignatureUploader({inv,set}){
   const fileRef=useRef();
   const [processing,setProcessing]=useState(false);
   const [dragOver,setDragOver]=useState(false);
+  const [activeMode,setActiveMode]=useState(null); // null | "draw" | "type"
+
   const handleFile=file=>{
     if(!file||!file.type.startsWith("image/"))return;
     setProcessing(true);
     const reader=new FileReader();
-    reader.onload=e=>{processSignature(e.target.result,clean=>{set("signatureDataUrl",clean);set("signatureMode","image");setProcessing(false);});};
+    reader.onload=e=>{processSignature(e.target.result,clean=>{
+      set("signatureDataUrl",clean);set("signatureMode","image");setProcessing(false);
+    });};
     reader.readAsDataURL(file);
   };
+
+  const handleSaved=(dataUrl)=>{
+    set("signatureDataUrl",dataUrl);
+    set("signatureMode","image");
+    setActiveMode(null);
+  };
+
+  const clear=()=>{set("signatureDataUrl","");set("signatureMode","line");setActiveMode(null);};
+
+  const modes=[
+    {id:"draw",  label:"✏️ Draw",   title:"Draw your signature with mouse or finger"},
+    {id:"type",  label:"Aa Type",  title:"Type your name in a signature font"},
+    {id:"upload",label:"↑ Upload", title:"Upload a photo or scan of your signature"},
+  ];
+
   return(
     <div>
-      <div style={{fontSize:"11px",fontWeight:600,color:C.gray400,letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:"10px"}}>Signature</div>
-      <div style={{display:"flex",gap:"6px",marginBottom:"12px"}}>
-        {[{id:"line",label:"Line only"},{id:"image",label:"Upload image"}].map(m=>(
-          <button key={m.id} onClick={()=>set("signatureMode",m.id)} style={{
-            padding:"5px 12px",borderRadius:"5px",
-            border:`1px solid ${inv.signatureMode===m.id?C.gray900:C.gray200}`,
-            background:inv.signatureMode===m.id?C.gray900:C.white,
-            color:inv.signatureMode===m.id?C.white:C.gray500,
-            fontSize:"12px",fontWeight:500,cursor:"pointer",fontFamily:"inherit",transition:"all 0.12s",
-          }}>{m.label}</button>
-        ))}
-      </div>
-      {inv.signatureMode==="image"&&<>
-        {!inv.signatureDataUrl&&(
-          <div onDragOver={e=>{e.preventDefault();setDragOver(true)}}
-            onDragLeave={()=>setDragOver(false)}
-            onDrop={e=>{e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0]);}}
-            onClick={()=>fileRef.current.click()}
-            style={{border:`1.5px dashed ${dragOver?C.accent:C.gray300}`,borderRadius:"8px",
-              padding:"24px 16px",textAlign:"center",cursor:"pointer",
-              background:dragOver?C.accentL:C.gray50,transition:"all 0.15s"}}>
-            {processing?<div style={{fontSize:"12px",color:C.gray400}}>Processing…</div>:<>
-              <div style={{fontSize:"22px",marginBottom:"6px"}}>✍️</div>
-              <div style={{fontSize:"12px",fontWeight:500,color:C.gray600,marginBottom:"3px"}}>Drop signature image here</div>
-              <div style={{fontSize:"11px",color:C.gray400}}>or click to browse · JPG, PNG, WEBP</div>
-              <div style={{fontSize:"11px",color:C.gray400,marginTop:"4px"}}>White background is auto-removed</div>
-            </>}
+      <div style={{fontSize:"11px",fontWeight:600,color:C.gray400,letterSpacing:"0.07em",
+        textTransform:"uppercase",marginBottom:"10px"}}>Signature</div>
+
+      {/* If we have a signature saved, show preview */}
+      {inv.signatureDataUrl&&!activeMode?(
+        <div style={{border:`1px solid ${C.gray200}`,borderRadius:"8px",padding:"14px",background:C.gray50,marginBottom:"12px"}}>
+          <div style={{fontSize:"11px",color:C.gray400,marginBottom:"8px",fontWeight:500}}>Current signature</div>
+          <img src={inv.signatureDataUrl} alt="sig"
+            style={{height:"48px",maxWidth:"200px",objectFit:"contain",display:"block",marginBottom:"10px"}}/>
+          <div style={{display:"flex",gap:"6px"}}>
+            <button onClick={()=>setActiveMode("draw")} style={{flex:1,padding:"5px 8px",border:`1px solid ${C.gray200}`,borderRadius:"5px",background:C.white,color:C.gray600,fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>✏️ Redraw</button>
+            <button onClick={()=>setActiveMode("type")} style={{flex:1,padding:"5px 8px",border:`1px solid ${C.gray200}`,borderRadius:"5px",background:C.white,color:C.gray600,fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>Aa Retype</button>
+            <button onClick={()=>fileRef.current.click()} style={{flex:1,padding:"5px 8px",border:`1px solid ${C.gray200}`,borderRadius:"5px",background:C.white,color:C.gray600,fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>↑ Upload</button>
+            <button onClick={clear} style={{padding:"5px 8px",border:"1px solid #fecaca",borderRadius:"5px",background:C.white,color:"#dc2626",fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>×</button>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>handleFile(e.target.files[0])}/>
+        </div>
+      ):(
+        /* No signature yet - show method picker unless one is active */
+        !activeMode&&!inv.signatureDataUrl&&(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"6px",marginBottom:"12px"}}>
+            {modes.map(m=>(
+              <button key={m.id} title={m.title}
+                onClick={()=>m.id==="upload"?fileRef.current.click():setActiveMode(m.id)}
+                style={{padding:"10px 6px",border:`1px solid ${C.gray200}`,borderRadius:"8px",
+                  background:C.white,color:C.gray700,fontSize:"12px",fontWeight:500,
+                  cursor:"pointer",fontFamily:"inherit",textAlign:"center",lineHeight:1.4,
+                  transition:"border-color 0.12s"}}
+                onMouseEnter={e=>e.currentTarget.style.borderColor=C.gray400}
+                onMouseLeave={e=>e.currentTarget.style.borderColor=C.gray200}>
+                {m.label}
+              </button>
+            ))}
             <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>handleFile(e.target.files[0])}/>
           </div>
-        )}
-        {inv.signatureDataUrl&&(
-          <div style={{border:`1px solid ${C.gray200}`,borderRadius:"8px",padding:"14px",background:C.gray50}}>
-            <img src={inv.signatureDataUrl} alt="sig" style={{height:"40px",maxWidth:"130px",objectFit:"contain",display:"block",marginBottom:"6px"}}/>
-            <div style={{fontSize:"11px",color:C.gray500,marginBottom:"10px"}}>{inv.founderLabel}</div>
-            <div style={{display:"flex",gap:"6px"}}>
-              <button onClick={()=>fileRef.current.click()} style={{flex:1,padding:"5px 8px",border:`1px solid ${C.gray200}`,borderRadius:"5px",background:C.white,color:C.gray600,fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>Replace</button>
-              <button onClick={()=>{set("signatureDataUrl","");set("signatureMode","line");}} style={{padding:"5px 8px",border:"1px solid #fecaca",borderRadius:"5px",background:C.white,color:"#dc2626",fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>Remove</button>
-            </div>
-            <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>handleFile(e.target.files[0])}/>
-          </div>
-        )}
-      </>}
-      {inv.signatureMode==="line"&&<div style={{fontSize:"12px",color:C.gray400,lineHeight:1.6,padding:"8px 0"}}>A clean horizontal line will appear above the signatory name.</div>}
+        )
+      )}
+
+      {/* Draw pad */}
+      {activeMode==="draw"&&(
+        <DrawPad onSave={handleSaved} onCancel={()=>setActiveMode(null)}/>
+      )}
+
+      {/* Type signature */}
+      {activeMode==="type"&&(
+        <TypeSignature name={inv.founderLabel} onSave={handleSaved} onCancel={()=>setActiveMode(null)}/>
+      )}
+
+      {/* Upload drag zone */}
+      {activeMode==="upload"&&(
+        <div onDragOver={e=>{e.preventDefault();setDragOver(true)}}
+          onDragLeave={()=>setDragOver(false)}
+          onDrop={e=>{e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0]);}}
+          onClick={()=>fileRef.current.click()}
+          style={{border:`1.5px dashed ${dragOver?C.accent:C.gray300}`,borderRadius:"8px",
+            padding:"24px 16px",textAlign:"center",cursor:"pointer",
+            background:dragOver?C.accentL:C.gray50,transition:"all 0.15s",marginBottom:"10px"}}>
+          {processing?<div style={{fontSize:"12px",color:C.gray400}}>Processing…</div>:<>
+            <div style={{fontSize:"22px",marginBottom:"6px"}}>✍️</div>
+            <div style={{fontSize:"12px",fontWeight:500,color:C.gray600,marginBottom:"3px"}}>Drop signature image here</div>
+            <div style={{fontSize:"11px",color:C.gray400}}>or click to browse · JPG, PNG, WEBP</div>
+            <div style={{fontSize:"11px",color:C.gray400,marginTop:"4px"}}>White background is auto-removed</div>
+          </>}
+          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{handleFile(e.target.files[0]);setActiveMode(null);}}/>
+        </div>
+      )}
+
+      {/* Line fallback hint */}
+      {!inv.signatureDataUrl&&!activeMode&&(
+        <div style={{fontSize:"11px",color:C.gray400,lineHeight:1.5,marginTop:"6px"}}>
+          Or leave empty — a signature line will appear on the invoice.
+        </div>
+      )}
     </div>
   );
 }
