@@ -19,15 +19,15 @@ const C = {
 };
 
 const BASE_CURRENCIES = [
-  { code:"PKR", sym:"PKR" }, { code:"USD", sym:"$"   }, { code:"EUR", sym:"\u20ac"   },
-  { code:"GBP", sym:"\u00a3"   }, { code:"AED", sym:"AED" }, { code:"SAR", sym:"SAR" },
+  { code:"PKR", sym:"PKR" }, { code:"USD", sym:"$"   }, { code:"EUR", sym:"€"   },
+  { code:"GBP", sym:"£"   }, { code:"AED", sym:"AED" }, { code:"SAR", sym:"SAR" },
   { code:"CAD", sym:"CA$" }, { code:"AUD", sym:"A$"  },
 ];
 
 const uid = () => Math.random().toString(36).slice(2,8);
 
 const seed = [
-  { id:uid(), type:"header",    name:"Website Layout Design",                         price:"19550", note:"Per hour \u00b7 PKR 2,800" },
+  { id:uid(), type:"header",    name:"Website Layout Design",                         price:"19550", note:"Per hour · PKR 2,800" },
   { id:uid(), type:"included",  name:"Design System & Style Guide",                   price:"",      note:"" },
   { id:uid(), type:"included",  name:"Responsive Design (Desktop / Tablet / Mobile)", price:"",      note:"" },
   { id:uid(), type:"included",  name:"Developer Handoff Documentation",               price:"",      note:"" },
@@ -46,7 +46,7 @@ const DEF = {
 
 function fmtNum(v) {
   const n = parseFloat(String(v).replace(/,/g,""));
-  if (isNaN(n)) return "\u2014";
+  if (isNaN(n)) return "—";
   return n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
@@ -126,7 +126,7 @@ function Doc({ inv, allCurrencies }) {
           {pi>0 && (
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               marginBottom:"36px",paddingBottom:"16px",borderBottom:`1px solid ${C.gray200}`}}>
-              <span style={{fontSize:"13px",color:C.gray500,fontWeight:500}}>{inv.agencyName} \u00b7 {inv.clientName}</span>
+              <span style={{fontSize:"13px",color:C.gray500,fontWeight:500}}>{inv.agencyName} · {inv.clientName}</span>
               <span style={{fontSize:"12px",color:C.gray400}}>Page {pi+1} of {pages.length}</span>
             </div>
           )}
@@ -163,7 +163,7 @@ function Doc({ inv, allCurrencies }) {
                   padding:"11px 0",borderBottom:`1px solid ${C.gray100}`}}>
                   <span style={{fontSize:"13px",color:C.gray600}}>{item.name}</span>
                   <span style={{textAlign:"right",fontSize:"13px",color:C.gray600}}>
-                    {item.price ? `\u2212${sym} ${fmtNum(item.price)}` : ""}
+                    {item.price ? `−${sym} ${fmtNum(item.price)}` : ""}
                   </span>
                 </div>
               );
@@ -272,7 +272,7 @@ function CurrencyModal({ onAdd, onClose }) {
         <FL label="Currency Code (e.g. MYR, JPY)">
           <Inp value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder="MYR" maxLength={6}/>
         </FL>
-        <FL label="Symbol (e.g. RM, \u00a5)">
+        <FL label="Symbol (e.g. RM, ¥)">
           <Inp value={sym} onChange={e=>setSym(e.target.value)} placeholder="RM" maxLength={8}/>
         </FL>
         <div style={{display:"flex",gap:"8px",marginTop:"8px"}}>
@@ -334,11 +334,11 @@ function SignatureUploader({ inv, set }) {
                 padding:"24px 16px",textAlign:"center",cursor:"pointer",
                 background:dragOver?C.accentL:C.gray50,transition:"all 0.15s"}}>
               {processing ? (
-                <div style={{fontSize:"12px",color:C.gray400}}>Processing\u2026</div>
+                <div style={{fontSize:"12px",color:C.gray400}}>Processing…</div>
               ) : (<>
-                <div style={{fontSize:"22px",marginBottom:"6px"}}>\u270d\ufe0f</div>
+                <div style={{fontSize:"22px",marginBottom:"6px"}}>✍️</div>
                 <div style={{fontSize:"12px",fontWeight:500,color:C.gray600,marginBottom:"3px"}}>Drop signature image here</div>
-                <div style={{fontSize:"11px",color:C.gray400}}>or click to browse \u00b7 JPG, PNG, WEBP</div>
+                <div style={{fontSize:"11px",color:C.gray400}}>or click to browse · JPG, PNG, WEBP</div>
                 <div style={{fontSize:"11px",color:C.gray400,marginTop:"6px"}}>White background is auto-removed</div>
               </>)}
               <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}}
@@ -404,14 +404,36 @@ export default function App() {
     setShowCurrModal(false);
   };
   const print = () => {
-    const s=document.createElement("style"); s.id="pov";
-    s.textContent=`@media print{body>*{display:none!important}#__pr__{display:block!important}.iv-page{page-break-after:always;box-shadow:none!important;margin:0!important}}`;
-    document.head.appendChild(s);
     const el=document.getElementById("__pr__");
-    if(el) el.style.display="block";
-    window.print();
-    document.head.removeChild(s);
-    if(el) el.style.display="none";
+    if(!el) return;
+    // Show the hidden invoice
+    el.style.display="block";
+    // Inject print styles
+    const s=document.createElement("style");
+    s.id="xtarc-print-style";
+    s.textContent=`
+      @media print {
+        body > * { display: none !important; }
+        #__pr__ { display: block !important; }
+        #__pr__ .iv-page {
+          page-break-after: always;
+          box-shadow: none !important;
+          margin: 0 !important;
+          width: 100% !important;
+        }
+      }
+    `;
+    document.head.appendChild(s);
+    // Wait for DOM to paint before printing
+    setTimeout(() => {
+      window.print();
+      // Cleanup after print dialog closes
+      setTimeout(() => {
+        el.style.display="none";
+        const existing = document.getElementById("xtarc-print-style");
+        if(existing) document.head.removeChild(existing);
+      }, 1000);
+    }, 300);
   };
   const Tab = ({id,label}) => (
     <button onClick={()=>setTab(id)} style={{
@@ -473,7 +495,7 @@ export default function App() {
               <FL label="Currency">
                 <div style={{display:"flex",gap:"6px"}}>
                   <Sel value={inv.currency} onChange={e=>set("currency",e.target.value)}>
-                    {allCurrencies.map(c=>(<option key={c.code} value={c.code}>{c.sym} \u00b7 {c.code}</option>))}
+                    {allCurrencies.map(c=>(<option key={c.code} value={c.code}>{c.sym} · {c.code}</option>))}
                   </Sel>
                   <button onClick={()=>setShowCurrModal(true)} title="Add custom currency" style={{
                     flexShrink:0,padding:"7px 10px",border:`1px solid ${C.gray200}`,
@@ -519,14 +541,14 @@ export default function App() {
                       <span style={{fontSize:"10px",fontWeight:600,color:m.accent,
                         letterSpacing:"0.07em",textTransform:"uppercase"}}>{m.label}</span>
                       <div style={{display:"flex",gap:"3px"}}>
-                        {["\u2191","\u2193"].map((a,di)=>(
+                        {["↑","↓"].map((a,di)=>(
                           <button key={a} onClick={()=>mv(item.id,di===0?-1:1)} style={{
                             background:"none",border:`1px solid ${C.gray200}`,borderRadius:"4px",
                             cursor:"pointer",padding:"1px 6px",fontSize:"10px",color:C.gray500}}>{a}</button>
                         ))}
                         <button onClick={()=>del(item.id)} style={{
                           background:"none",border:"1px solid #fecaca",borderRadius:"4px",
-                          cursor:"pointer",padding:"1px 6px",fontSize:"10px",color:"#dc2626"}}>\u00d7</button>
+                          cursor:"pointer",padding:"1px 6px",fontSize:"10px",color:"#dc2626"}}>×</button>
                       </div>
                     </div>
                     <Inp placeholder="Description" value={item.name}
