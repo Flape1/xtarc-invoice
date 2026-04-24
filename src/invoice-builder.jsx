@@ -237,11 +237,14 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
   return (
     <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       style={{position:"relative", borderBottom:`1px solid ${C.gray100}`,
-        background:hov?"#f8faff":"transparent", transition:"background 0.1s"}}>
+        background:hov?"#f8faff":"transparent", transition:"background 0.1s",
+        overflow:"visible"}}>
 
-      {/* Toolbar — anchored inside the row top-right, no gap, hidden in PDF */}
+      {/* Toolbar — floats above the row, centered, hidden in PDF */}
       {hov && (
-        <div data-noprint="1" style={{position:"absolute",top:"6px",right:"0",zIndex:50,pointerEvents:"all"}}
+        <div data-noprint="1"
+          style={{position:"absolute",top:"-34px",left:"50%",transform:"translateX(-50%)",
+            zIndex:50,pointerEvents:"all",whiteSpace:"nowrap"}}
           onMouseEnter={()=>setHov(true)}>
           <RowToolbar item={item} canUp={idx>0} canDown={idx<total-1}
             onDel={()=>onDel(item.id)} onDup={()=>onDup(item.id)}
@@ -688,7 +691,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, SIG_B64_FALLBACK }) 
           </div>
 
           {/* Rows */}
-          <div style={{flex:1}} onDragOver={e=>e.preventDefault()}>
+          <div style={{flex:1,overflow:"visible",paddingTop:"4px"}} onDragOver={e=>e.preventDefault()}>
             {rows.map(item => (
               <div key={item.id} onDrop={e=>onDrop(e,item.id)} onDragOver={e=>e.preventDefault()}>
                 <InvoiceRow item={item} idx={inv.items.indexOf(item)} total={inv.items.length}
@@ -714,7 +717,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, SIG_B64_FALLBACK }) 
                   {inv.taxRate && <div style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:"12px",color:C.gray600}}><span>Tax ({inv.taxRate}%)</span><span>+{sym} {fmtNum(tax)}</span></div>}
                 </div>
               )}
-              <div style={{marginBottom:"32px",paddingBottom:"24px",borderBottom:`1px solid ${C.gray200}`}}>
+              <div style={{marginBottom:"32px"}}>
                 <Editable value={inv.notes} onChange={v=>set(p=>({...p,notes:v}))}
                   placeholder="Footer notes…" multiline style={{fontSize:"12px",color:C.gray400,lineHeight:1.6}}/>
               </div>
