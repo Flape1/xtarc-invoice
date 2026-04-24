@@ -115,7 +115,7 @@ function Editable({ value, onChange, placeholder, style, multiline, onEnter, onT
   return (
     <div onClick={()=>setEditing(true)}
       style={{ cursor:"text", minWidth:"30px", minHeight:"1.2em", ...style }}>
-      {local || <span style={{opacity:0.35,fontWeight:400,fontStyle:"normal",color:C.gray400}}>{placeholder}</span>}
+      {local || <span className="edit-placeholder" style={{opacity:0.35,fontWeight:400,fontStyle:"normal",color:C.gray400}}>{placeholder}</span>}
     </div>
   );
 }
@@ -239,9 +239,9 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
       style={{position:"relative", borderBottom:`1px solid ${C.gray100}`,
         background:hov?"#f8faff":"transparent", transition:"background 0.1s"}}>
 
-      {/* Toolbar — anchored inside the row top-right, no gap */}
+      {/* Toolbar — anchored inside the row top-right, no gap, hidden in PDF */}
       {hov && (
-        <div style={{position:"absolute",top:"6px",right:"0",zIndex:50,pointerEvents:"all"}}
+        <div data-noprint="1" style={{position:"absolute",top:"6px",right:"0",zIndex:50,pointerEvents:"all"}}
           onMouseEnter={()=>setHov(true)}>
           <RowToolbar item={item} canUp={idx>0} canDown={idx<total-1}
             onDel={()=>onDel(item.id)} onDup={()=>onDup(item.id)}
@@ -256,7 +256,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
 
         {/* Description column */}
         <div style={{display:"flex",alignItems:"flex-start",gap:"5px",paddingLeft:item.type==="included"?"12px":0}}>
-          <span style={{color:C.gray300,fontSize:"11px",paddingTop:"3px",cursor:"grab",flexShrink:0,
+          <span data-noprint="1" style={{color:C.gray300,fontSize:"11px",paddingTop:"3px",cursor:"grab",flexShrink:0,
             opacity:hov?1:0,transition:"opacity 0.15s",userSelect:"none"}}
             draggable onDragStart={e=>e.dataTransfer.setData("rowId",item.id)}>⠿</span>
           <div style={{flex:1,minWidth:0}}>
@@ -270,9 +270,9 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
                 placeholder="Add note…"
                 style={{fontSize:"11px",color:C.gray400,lineHeight:1.4,marginTop:"3px"}}/>
             )}
-            {/* Hrs × Rate calculator pill — single col only */}
+            {/* Hrs × Rate calculator pill — single col only, hidden in PDF */}
             {item.type !== "included" && !twoCol && (
-              <div style={{display:"inline-flex",alignItems:"center",gap:"3px",marginTop:"5px",
+              <div data-noprint="1" style={{display:"inline-flex",alignItems:"center",gap:"3px",marginTop:"5px",
                 background:C.gray100,borderRadius:"6px",padding:"3px 8px"}}>
                 <Editable value={item.hours||""} onChange={v=>onUpd(item.id,"hours",v)}
                   placeholder="Qty" style={{fontSize:"11px",color:C.gray700,minWidth:"28px",maxWidth:"48px"}}/>
@@ -307,20 +307,20 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
             <div>
               <Editable value={item.price||""} onChange={v=>onUpd(item.id,"price",v)}
                 placeholder="0.00" style={{fontSize:"13px",color:C.gray600,textAlign:"right"}}/>
-              {item.price && <div style={{fontSize:"10px",color:C.gray400,marginTop:"1px"}}>deducted</div>}
+              {item.price && <div data-noprint="1" style={{fontSize:"10px",color:C.gray400,marginTop:"1px"}}>deducted</div>}
             </div>
           ) : (
             <div>
               {price && item.hours && item.rate && parseFloat(item.hours)>0 ? (
                 <div>
                   <span style={{fontSize:"13px",color:C.gray800,fontWeight:item.bold?700:500}}>{sym} {fmtNum(price)}</span>
-                  <div style={{fontSize:"10px",color:"#059669",marginTop:"1px"}}>auto-calc</div>
+                  <div data-noprint="1" style={{fontSize:"10px",color:"#059669",marginTop:"1px"}}>auto-calc</div>
                 </div>
               ) : (
                 <div>
                   <Editable value={item.price||""} onChange={v=>onUpd(item.id,"price",v)}
                     placeholder="0.00" style={{fontSize:"13px",color:C.gray700,textAlign:"right"}}/>
-                  <div style={{fontSize:"10px",color:C.gray400,marginTop:"1px"}}>click to set</div>
+                  <div data-noprint="1" style={{fontSize:"10px",color:C.gray400,marginTop:"1px"}}>click to set</div>
                 </div>
               )}
             </div>
@@ -328,9 +328,9 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
         </div>
       </div>
 
-      {/* Insert-after + button */}
+      {/* Insert-after + button — hidden in PDF */}
       {hov && (
-        <div style={{position:"absolute",bottom:"-10px",left:"50%",transform:"translateX(-50%)",zIndex:40}}
+        <div data-noprint="1" style={{position:"absolute",bottom:"-10px",left:"50%",transform:"translateX(-50%)",zIndex:40}}
           onMouseEnter={()=>setHov(true)}>
           <button onClick={()=>onInsert(item.id)}
             style={{width:"20px",height:"20px",borderRadius:"50%",border:`1.5px solid ${C.accent}`,
@@ -700,7 +700,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, SIG_B64_FALLBACK }) 
 
           {/* Add row — last page only */}
           {pi===pages.length-1 && (
-            <div style={{marginTop:"8px",marginBottom:"12px"}}>
+            <div data-noprint="1" style={{marginTop:"8px",marginBottom:"12px"}}>
               <AddRowMenu onAdd={t=>set(p=>({...p,items:[...p.items,mkItem(t)]}))}/>
             </div>
           )}
@@ -724,7 +724,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, SIG_B64_FALLBACK }) 
                     <img src={inv.signatureDataUrl} alt="sig"
                       style={{height:"72px",maxWidth:"220px",objectFit:"contain",display:"block",marginBottom:"8px"}}/>
                   ) : (
-                    <div style={{width:"80px",height:"1px",background:C.gray300,marginBottom:"8px"}}/>
+                    <div style={{width:"80px",height:"1px",background:C.gray200,marginBottom:"8px"}}/>
                   )}
                   <Editable value={inv.founderLabel} onChange={v=>set(p=>({...p,founderLabel:v}))}
                     placeholder="Signatory" style={{fontSize:"12px",color:C.gray500,fontWeight:500}}/>
@@ -735,13 +735,13 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, SIG_B64_FALLBACK }) 
                     {sym} {fmtNum(grand)||"—"}
                   </div>
                   {!override && grand>0 && (
-                    <div style={{fontSize:"10px",color:C.gray400,marginTop:"3px"}}>
+                    <div data-noprint="1" style={{fontSize:"10px",color:C.gray400,marginTop:"3px"}}>
                       auto · <span style={{cursor:"pointer",color:C.accent}}
                         onClick={()=>set(p=>({...p,total:grand.toFixed(2)}))}>lock in ↓</span>
                     </div>
                   )}
                   {override && (
-                    <div style={{fontSize:"10px",color:"#f59e0b",marginTop:"3px",cursor:"pointer"}}
+                    <div data-noprint="1" style={{fontSize:"10px",color:"#f59e0b",marginTop:"3px",cursor:"pointer"}}
                       onClick={()=>set(p=>({...p,total:""}))}>overridden · reset ↺</div>
                   )}
                 </div>
@@ -823,24 +823,54 @@ export default function App() {
     if (loading) return;
     setLoading(true);
     const el = document.getElementById("__pr__");
-    el.setAttribute("data-exporting","1");
+    if (!el) { setLoading(false); return; }
+
+    // Move element to body to escape any CSS transform wrappers
+    // This is the key fix for text distortion
+    const originalParent = el.parentNode;
+    const originalNextSibling = el.nextSibling;
+    document.body.appendChild(el);
+    el.style.cssText = "position:fixed;top:-99999px;left:0;width:794px;background:white;z-index:-1;";
+
     try {
       await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
       await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
       const jsPDF = window.jspdf.jsPDF, h2c = window.html2canvas;
-      await new Promise(r=>setTimeout(r,200));
+
+      // Wait for layout to settle
+      await new Promise(r=>setTimeout(r,300));
+
       const sm={low:1.5,medium:2.5,high:3.5}, qm={low:0.65,medium:0.88,high:0.96};
       const scale=sm[inv.pdfQuality]||2.5, qual=qm[inv.pdfQuality]||0.88;
       const pgs = el.querySelectorAll(".iv-page");
       const pdf = new jsPDF({unit:"pt",format:"a4",orientation:"portrait"});
       const pW=pdf.internal.pageSize.getWidth(), pH=pdf.internal.pageSize.getHeight();
+
       for (let i=0;i<pgs.length;i++) {
         const canvas = await h2c(pgs[i], {
-          scale, useCORS:true, allowTaint:true, backgroundColor:"#ffffff",
-          logging:false, imageTimeout:0,
-          onclone: doc => {
-            const s=doc.createElement("style");
-            s.textContent="*{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif!important;}";
+          scale,
+          useCORS:true,
+          allowTaint:true,
+          backgroundColor:"#ffffff",
+          logging:false,
+          imageTimeout:0,
+          onclone: (doc) => {
+            // Hide all UI-only elements
+            doc.querySelectorAll("[data-noprint]").forEach(n => { n.style.display="none"; });
+            // Hide empty placeholder text in editable fields
+            doc.querySelectorAll(".edit-placeholder").forEach(n => { n.style.display="none"; });
+            // Clean up hover states
+            doc.querySelectorAll(".row-hover-bg").forEach(n => { n.style.background="transparent"; });
+            // Fix fonts — use system fonts which render correctly in canvas
+            const s = doc.createElement("style");
+            s.textContent = [
+              "* { font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif !important; }",
+              "[data-noprint] { display: none !important; }",
+              ".edit-placeholder { display: none !important; }",
+              "input, textarea { display: none !important; }",
+              // Remove any transform that might have leaked
+              ".iv-page { transform: none !important; }",
+            ].join(" ");
             doc.head.appendChild(s);
           }
         });
@@ -854,7 +884,13 @@ export default function App() {
       console.error(err);
       alert("Export failed: " + err.message);
     } finally {
-      el.removeAttribute("data-exporting");
+      // Restore element to original position
+      el.style.cssText = "";
+      if (originalNextSibling) {
+        originalParent.insertBefore(el, originalNextSibling);
+      } else {
+        originalParent.appendChild(el);
+      }
       setLoading(false);
     }
   };
