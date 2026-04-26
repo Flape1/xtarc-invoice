@@ -93,11 +93,12 @@ function Editable({ value, onChange, placeholder, style, multiline, onEnter, onT
   };
 
   const base = {
-    background:"transparent", border:"none", outline:"none",
-    width:"100%", fontFamily:"inherit", padding:0, margin:0,
+    background:C.white, border:`1px solid ${C.gray300}`, outline:"none",
+    width:"100%", fontFamily:"inherit", padding:"6px 8px", margin:0,
     fontSize:"inherit", color:"inherit", fontWeight:"inherit",
     fontStyle:"inherit", resize:"none", lineHeight:"inherit",
-    letterSpacing:"inherit", ...style,
+    letterSpacing:"inherit", borderRadius:"6px",
+    boxShadow:"inset 0 1px 0 rgba(255,255,255,0.25)", ...style,
   };
 
   if (editing) {
@@ -116,16 +117,16 @@ function Editable({ value, onChange, placeholder, style, multiline, onEnter, onT
     <div onClick={()=>setEditing(true)} className="editable-field"
       style={{
         cursor:"text", minWidth:"30px", minHeight:"1.2em",
-        borderRadius:"4px",
-        outline:"1.5px dashed transparent",
-        outlineColor:"transparent",
-        transition:"outline-color 0.15s, background 0.15s",
-        padding:"1px 3px",
-        margin:"-1px -3px",
+        borderRadius:"6px",
+        border:`1px solid ${C.gray300}`,
+        background:C.white,
+        transition:"border-color 0.15s, background 0.15s, box-shadow 0.15s",
+        padding:"6px 8px",
+        boxShadow:"inset 0 1px 0 rgba(255,255,255,0.25)",
         ...style,
       }}
-      onMouseEnter={e=>{ e.currentTarget.style.outlineColor=C.gray300; e.currentTarget.style.background="rgba(37,99,235,0.03)"; }}
-      onMouseLeave={e=>{ e.currentTarget.style.outlineColor="transparent"; e.currentTarget.style.background="transparent"; }}>
+      onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.accent; e.currentTarget.style.background=C.accentL; e.currentTarget.style.boxShadow=`0 0 0 3px rgba(37,99,235,0.08)`; }}
+      onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.gray300; e.currentTarget.style.background=C.white; e.currentTarget.style.boxShadow="inset 0 1px 0 rgba(255,255,255,0.25)"; }}>
       {local || <span className="edit-placeholder" style={{opacity:0.35,fontWeight:400,fontStyle:"normal",color:C.gray400}}>{placeholder}</span>}
     </div>
   );
@@ -233,6 +234,7 @@ function RowToolbar({ item, onDel, onDup, onMv, onChangeType, onBold, onItalic, 
 /* ─── INVOICE ROW ───────────────────────────────────────────────────────── */
 function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onInsert }) {
   const [hov, setHov] = useState(false);
+  const TOOLBAR_ZONE = 38;
   const twoCol  = inv.columnMode === "2";
   const colGrid = twoCol ? "1fr 90px 70px 110px" : "1fr 130px";
   const price   = computePrice(item);
@@ -249,12 +251,15 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
     <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       style={{position:"relative", borderBottom:`1px solid ${C.gray100}`,
         background:hov?"#f8faff":"transparent", transition:"background 0.1s",
-        overflow:"visible"}}>
+        overflow:"visible",
+        paddingTop:hov ? `${TOOLBAR_ZONE}px` : 0,
+        marginTop:hov ? `-${TOOLBAR_ZONE}px` : 0,
+        zIndex:hov ? 20 : 1}}>
 
       {/* Toolbar — floats above the row, centered, hidden in PDF */}
       {hov && (
         <div data-noprint="1"
-          style={{position:"absolute",top:"-34px",left:"50%",transform:"translateX(-50%)",
+          style={{position:"absolute",top:"4px",left:"50%",transform:"translateX(-50%)",
             zIndex:50,pointerEvents:"all",whiteSpace:"nowrap"}}
           onMouseEnter={()=>setHov(true)}>
           <RowToolbar item={item} canUp={idx>0} canDown={idx<total-1}
@@ -406,7 +411,7 @@ function AddRowMenu({ onAdd }) {
 }
 
 /* ─── SETTINGS DRAWER ───────────────────────────────────────────────────── */
-function SettingsDrawer({ inv, set, allCurrencies, onAddCurrency, onClose, onSaveDefaultSig }) {
+function SettingsDrawer({ inv, set, allCurrencies, onAddCurrency, onClose, onSaveDefaultSig, ui }) {
   const [sigMode,  setSigMode]  = useState("none");
   const [proc,     setProc]     = useState(false);
   const [ncc,      setNcc]      = useState("");
@@ -423,29 +428,29 @@ function SettingsDrawer({ inv, set, allCurrencies, onAddCurrency, onClose, onSav
     r.readAsDataURL(file);
   };
 
-  const iStyle = {width:"100%",boxSizing:"border-box",padding:"8px 11px",border:`1px solid ${C.gray200}`,borderRadius:"8px",fontSize:"13px",color:C.gray900,background:C.white,outline:"none",fontFamily:"inherit"};
-  const onFoc  = e => e.target.style.borderColor = C.accent;
-  const onBlr  = e => e.target.style.borderColor = C.gray200;
+  const iStyle = {width:"100%",boxSizing:"border-box",padding:"8px 11px",border:`1px solid ${ui.inputBorder}`,borderRadius:"8px",fontSize:"13px",color:ui.text,background:ui.inputBg,outline:"none",fontFamily:"inherit"};
+  const onFoc  = e => { e.target.style.borderColor = C.accent; e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.12)"; };
+  const onBlr  = e => { e.target.style.borderColor = ui.inputBorder; e.target.style.boxShadow = "none"; };
   const Inp    = ({v,c,ph,t="text"}) => <input type={t} value={v} onChange={e=>c(e.target.value)} placeholder={ph||""} style={iStyle} onFocus={onFoc} onBlur={onBlr}/>;
   const Sel    = ({v,c,opts}) => <select value={v} onChange={e=>c(e.target.value)} style={{...iStyle,cursor:"pointer"}} onFocus={onFoc} onBlur={onBlr}>{opts.map(([val,lbl])=><option key={val} value={val}>{lbl}</option>)}</select>;
-  const FL     = ({l,children}) => <div style={{marginBottom:"14px"}}><div style={{fontSize:"11px",fontWeight:600,color:C.gray500,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:"5px"}}>{l}</div>{children}</div>;
-  const Sec    = ({children}) => <div style={{fontSize:"11px",fontWeight:700,color:C.gray300,textTransform:"uppercase",letterSpacing:"0.08em",margin:"24px 0 14px",paddingBottom:"8px",borderBottom:`1px solid ${C.gray100}`}}>{children}</div>;
+  const FL     = ({l,children}) => <div style={{marginBottom:"14px"}}><div style={{fontSize:"11px",fontWeight:600,color:ui.muted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:"5px"}}>{l}</div>{children}</div>;
+  const Sec    = ({children}) => <div style={{fontSize:"11px",fontWeight:700,color:ui.section,textTransform:"uppercase",letterSpacing:"0.08em",margin:"24px 0 14px",paddingBottom:"8px",borderBottom:`1px solid ${ui.softBorder}`}}>{children}</div>;
 
   return (
     <div style={{position:"fixed",top:0,right:0,bottom:0,
-      width:"min(296px, 100vw)",background:C.white,
-      borderLeft:`1px solid ${C.gray200}`,zIndex:500,overflowY:"auto",
+      width:"min(320px, 100vw)",background:ui.panel,
+      borderLeft:`1px solid ${ui.border}`,zIndex:500,overflowY:"auto",
       fontFamily:"Inter,system-ui,sans-serif",display:"flex",flexDirection:"column"}}>
 
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-        padding:"16px 20px",borderBottom:`1px solid ${C.gray100}`,
-        position:"sticky",top:0,background:C.white,zIndex:1}}>
-        <span style={{fontSize:"14px",fontWeight:600,color:C.gray900,letterSpacing:"-0.1px"}}>Settings</span>
+        padding:"16px 20px",borderBottom:`1px solid ${ui.softBorder}`,
+        position:"sticky",top:0,background:ui.panel,zIndex:1}}>
+        <span style={{fontSize:"14px",fontWeight:600,color:ui.text,letterSpacing:"-0.1px"}}>Settings</span>
         <button onClick={onClose}
-          style={{background:"none",border:"none",cursor:"pointer",color:C.gray400,
+          style={{background:"none",border:"none",cursor:"pointer",color:ui.muted,
             width:"28px",height:"28px",borderRadius:"6px",fontSize:"18px",
             display:"flex",alignItems:"center",justifyContent:"center"}}
-          onMouseEnter={e=>{e.currentTarget.style.background=C.gray100;e.currentTarget.style.color=C.gray700;}}
+          onMouseEnter={e=>{e.currentTarget.style.background=ui.hover;e.currentTarget.style.color=ui.text;}}
           onMouseLeave={e=>{e.currentTarget.style.background="none";e.currentTarget.style.color=C.gray400;}}>×</button>
       </div>
 
@@ -521,7 +526,7 @@ function SettingsDrawer({ inv, set, allCurrencies, onAddCurrency, onClose, onSav
 }
 
 /* ─── TEMPLATES MODAL ───────────────────────────────────────────────────── */
-function TemplatesModal({ inv, onLoad, onClose }) {
+function TemplatesModal({ inv, onLoad, onClose, ui }) {
   const [tpls, setTpls] = useState(() => {
     try { return JSON.parse(localStorage.getItem("xtarc_tpl")||"[]"); } catch { return []; }
   });
@@ -835,8 +840,21 @@ export default function App() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [loading,       setLoading]       = useState(false);
   const [showQual,      setShowQual]      = useState(false);
+  const [dark,          setDark]          = useState(() => {
+    try { return JSON.parse(localStorage.getItem("xtarc_ui_dark") || "true"); }
+    catch { return true; }
+  });
   const qualRef = useRef(null);
   const allCurrencies = [...BASE_CURRENCIES, ...(inv.customCurrencies||[])];
+  const UI = dark ? {
+    bg:"#050608", panel:"#0b0d11", border:"rgba(255,255,255,0.12)", softBorder:"rgba(255,255,255,0.08)",
+    text:"#f4f7fb", muted:"#9ba7b5", section:"#6f7b89", hover:"rgba(255,255,255,0.06)",
+    inputBg:"#12161c", inputBorder:"rgba(255,255,255,0.14)", overlay:"rgba(0,0,0,0.52)"
+  } : {
+    bg:C.gray100, panel:C.white, border:C.gray200, softBorder:C.gray100,
+    text:C.gray900, muted:C.gray500, section:C.gray300, hover:C.gray100,
+    inputBg:C.white, inputBorder:C.gray200, overlay:"rgba(0,0,0,0.18)"
+  };
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -862,6 +880,9 @@ export default function App() {
     if (stored) setInv(p=>({...p,signatureDataUrl:stored}));
     else setInv(p=>({...p,signatureDataUrl:assets.sig}));
   }, []);
+  useEffect(() => {
+    localStorage.setItem("xtarc_ui_dark", JSON.stringify(dark));
+  }, [dark]);
 
   const saveDefaultSig = dataUrl => {
     setInv(p=>({...p,signatureDataUrl:dataUrl}));
@@ -959,9 +980,9 @@ export default function App() {
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
       <style>{`
         * { box-sizing: border-box; }
-        body { margin:0; background:${C.gray100}; font-family:Inter,system-ui,sans-serif; }
+        body { margin:0; background:${UI.bg}; color:${UI.text}; font-family:Inter,system-ui,sans-serif; }
         ::-webkit-scrollbar { width:4px; }
-        ::-webkit-scrollbar-thumb { background:${C.gray300}; border-radius:2px; }
+        ::-webkit-scrollbar-thumb { background:${dark ? "rgba(255,255,255,0.18)" : C.gray300}; border-radius:2px; }
 
         /* Mobile responsive */
         @media (max-width: 768px) {
@@ -978,30 +999,34 @@ export default function App() {
 
       {showTemplates && (
         <TemplatesModal inv={inv}
+          ui={UI}
           onLoad={d=>setInv({...d,items:(d.items||[]).map(i=>({...i,id:uid()}))})}
           onClose={()=>setShowTemplates(false)}/>
       )}
 
-      <div style={{minHeight:"100vh",background:C.gray100}}>
+      <div style={{minHeight:"100vh",background:`radial-gradient(circle at top left, ${dark ? "rgba(37,99,235,0.12)" : "rgba(37,99,235,0.06)"} 0, transparent 30%), ${UI.bg}`}}>
 
         {/* Top bar */}
         <div style={{
-          minHeight:"50px",background:C.white,borderBottom:`1px solid ${C.gray200}`,
+          minHeight:"56px",background:dark ? "rgba(5,6,8,0.9)" : "rgba(255,255,255,0.92)",borderBottom:`1px solid ${UI.border}`,
+          backdropFilter:"blur(16px)",
           display:"flex",alignItems:"center",justifyContent:"space-between",
           padding:"0 16px",position:"sticky",top:0,zIndex:300,
           flexWrap:"wrap",gap:"8px",paddingTop:"8px",paddingBottom:"8px"}}>
 
           <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-            {assets.logo && <img src={assets.logo} alt="XTARC" style={{height:"22px",width:"22px",objectFit:"contain",borderRadius:"3px"}}/>}
-            <span style={{fontSize:"13px",fontWeight:600,color:C.gray900}}>Invoice Builder</span>
-            <div style={{width:"1px",height:"14px",background:C.gray200}}/>
-            <span className="topbar-hint" style={{fontSize:"12px",color:C.gray400}}>Click any field to edit</span>
+            {assets.logo && <img src={assets.logo} alt="XTARC" style={{height:"26px",width:"26px",objectFit:"contain",borderRadius:"3px"}}/>}
+            <div>
+              <div style={{fontSize:"15px",fontWeight:600,color:UI.text}}>XTARC Invoice Builder</div>
+              <div className="topbar-hint" style={{fontSize:"11px",color:UI.muted,marginTop:"2px",letterSpacing:"0.05em",textTransform:"uppercase"}}>Edit in place · export clean PDF</div>
+            </div>
           </div>
 
           <div className="topbar-actions" style={{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"}}>
             <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={{...GBS(canUndo?"outline":"ghost"),padding:"5px 9px",fontSize:"14px"}}>↩</button>
             <button onClick={redo} disabled={!canRedo} title="Redo"          style={{...GBS(canRedo?"outline":"ghost"),padding:"5px 9px",fontSize:"14px"}}>↪</button>
-            <div style={{width:"1px",height:"14px",background:C.gray200,margin:"0 2px"}}/>
+            <div style={{width:"1px",height:"14px",background:UI.border,margin:"0 2px"}}/>
+            <button onClick={()=>setDark(v=>!v)} style={{...GBS(dark?"dark":"outline"),fontSize:"12px"}}><span>{dark ? "☀" : "☾"}</span><span className="topbar-btn-label"> {dark ? "Light" : "Dark"}</span></button>
             <button onClick={()=>setShowTemplates(true)} style={{...GBS("outline"),fontSize:"12px"}}><span>📋</span><span className="topbar-btn-label"> Templates</span></button>
             <button onClick={()=>setShowSettings(s=>!s)} style={{...GBS(showSettings?"dark":"outline"),fontSize:"12px"}}><span>⚙</span><span className="topbar-btn-label"> Settings</span></button>
             {/* Export PDF + Quality split button */}
@@ -1017,18 +1042,18 @@ export default function App() {
                 {QL[inv.pdfQuality]||"Med"} ▾
               </button>
               {showQual && (
-                <div style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:C.white,
-                  border:`1px solid ${C.gray200}`,borderRadius:"8px",
-                  boxShadow:"0 4px 16px rgba(0,0,0,0.1)",zIndex:100,overflow:"hidden",minWidth:"170px"}}>
+                <div style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:UI.panel,
+                  border:`1px solid ${UI.border}`,borderRadius:"8px",
+                  boxShadow:"0 12px 30px rgba(0,0,0,0.32)",zIndex:100,overflow:"hidden",minWidth:"170px"}}>
                   {[{v:"low",l:"Low quality",d:"Small file size"},{v:"medium",l:"Medium quality",d:"Recommended"},{v:"high",l:"High quality",d:"Sharp, larger file"}].map(({v,l,d})=>(
                     <button key={v} onClick={()=>{setInv(p=>({...p,pdfQuality:v}));setShowQual(false);}}
                       style={{display:"block",width:"100%",padding:"10px 14px",
-                        background:inv.pdfQuality===v?C.gray50:"none",border:"none",
-                        textAlign:"left",cursor:"pointer",fontFamily:"inherit",borderBottom:`1px solid ${C.gray100}`}}
-                      onMouseEnter={e=>e.currentTarget.style.background=C.gray50}
-                      onMouseLeave={e=>e.currentTarget.style.background=inv.pdfQuality===v?C.gray50:"none"}>
-                      <div style={{fontSize:"12px",fontWeight:500,color:C.gray900}}>{l}</div>
-                      <div style={{fontSize:"11px",color:C.gray400}}>{d}</div>
+                        background:inv.pdfQuality===v?UI.hover:"none",border:"none",
+                        textAlign:"left",cursor:"pointer",fontFamily:"inherit",borderBottom:`1px solid ${UI.softBorder}`}}
+                      onMouseEnter={e=>e.currentTarget.style.background=UI.hover}
+                      onMouseLeave={e=>e.currentTarget.style.background=inv.pdfQuality===v?UI.hover:"none"}>
+                      <div style={{fontSize:"12px",fontWeight:500,color:UI.text}}>{l}</div>
+                      <div style={{fontSize:"11px",color:UI.muted}}>{d}</div>
                     </button>
                   ))}
                 </div>
@@ -1038,19 +1063,23 @@ export default function App() {
         </div>
 
         {/* Invoice canvas */}
-        <div className="invoice-canvas-outer" style={{padding:"32px 24px",display:"flex",justifyContent:"center",overflowX:"auto"}}>
-          <MobileScaler>
-            <InvoiceCanvas inv={inv} set={setInv} allCurrencies={allCurrencies}
-              LOGO_B64={assets.logo} SIG_B64_FALLBACK={assets.sig}/>
-          </MobileScaler>
+        <div className="invoice-canvas-outer" style={{padding:"32px 24px 40px",display:"flex",justifyContent:"center",overflowX:"auto"}}>
+          <div style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:"18px",padding:"18px",
+            boxShadow:dark ? "0 24px 70px rgba(0,0,0,0.45)" : "0 18px 45px rgba(15,23,42,0.08)"}}>
+            <MobileScaler>
+              <InvoiceCanvas inv={inv} set={setInv} allCurrencies={allCurrencies}
+                LOGO_B64={assets.logo} SIG_B64_FALLBACK={assets.sig}/>
+            </MobileScaler>
+          </div>
         </div>
       </div>
 
       {/* Settings drawer */}
       {showSettings && <>
         <div onClick={()=>setShowSettings(false)}
-          style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.15)",zIndex:499}}/>
+          style={{position:"fixed",inset:0,background:UI.overlay,zIndex:499}}/>
         <SettingsDrawer inv={inv} set={(k,v)=>setInv(p=>({...p,[k]:v}))}
+          ui={UI}
           allCurrencies={allCurrencies}
           onAddCurrency={({code,sym})=>{if(!allCurrencies.find(c=>c.code===code))setInv(p=>({...p,customCurrencies:[...(p.customCurrencies||[]),{code,sym}],currency:code}));}}
           onClose={()=>setShowSettings(false)}
