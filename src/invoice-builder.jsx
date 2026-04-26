@@ -1249,18 +1249,45 @@ export default function App() {
           logging:false,
           imageTimeout:0,
           onclone: (doc) => {
-  doc.querySelectorAll("[data-noprint]").forEach(n => { n.style.display = "none"; });
-  doc.querySelectorAll(".edit-placeholder").forEach(n => { n.style.display = "none"; });
-  doc.querySelectorAll(".row-hover-bg").forEach(n => { n.style.background = "transparent"; });
+  doc.querySelectorAll("[data-noprint]").forEach(n => {
+    n.style.display = "none";
+  });
+
+  doc.querySelectorAll(".edit-placeholder").forEach(n => {
+    n.style.display = "none";
+  });
+
+  doc.querySelectorAll(".row-hover-bg").forEach(n => {
+    n.style.background = "transparent";
+  });
+
+  doc.querySelectorAll(".editable-field").forEach(n => {
+    n.style.border = "none";
+    n.style.outline = "none";
+    n.style.boxShadow = "none";
+    n.style.background = "transparent";
+    n.style.padding = "0";
+    n.style.margin = "0";
+    n.style.borderRadius = "0";
+    n.style.minHeight = "0";
+  });
+
+  doc.querySelectorAll("input, textarea").forEach(n => {
+    n.style.display = "none";
+    n.style.border = "none";
+    n.style.outline = "none";
+    n.style.boxShadow = "none";
+    n.style.background = "transparent";
+  });
 
   const s = doc.createElement("style");
   s.textContent = [
     "* { font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif !important; }",
     "[data-noprint] { display: none !important; }",
     ".edit-placeholder { display: none !important; }",
-    "input, textarea { display: none !important; border: none !important; box-shadow: none !important; background: transparent !important; }",
+    "input, textarea { display: none !important; }",
     ".iv-page { transform: none !important; }",
-    ".editable-field { outline: none !important; border: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; border-radius: 0 !important; }",
+    ".editable-field { border: none !important; outline: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; border-radius: 0 !important; min-height: 0 !important; }",
   ].join(" ");
   doc.head.appendChild(s);
 }
