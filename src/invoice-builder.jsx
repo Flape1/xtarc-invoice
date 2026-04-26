@@ -1249,25 +1249,23 @@ export default function App() {
           logging:false,
           imageTimeout:0,
           onclone: (doc) => {
-            // Hide all UI-only elements
-            doc.querySelectorAll("[data-noprint]").forEach(n => { n.style.display="none"; });
-            // Hide empty placeholder text in editable fields
-            doc.querySelectorAll(".edit-placeholder").forEach(n => { n.style.display="none"; });
-            // Clean up hover states
-            doc.querySelectorAll(".row-hover-bg").forEach(n => { n.style.background="transparent"; });
-            // Fix fonts — use system fonts which render correctly in canvas
-            const s = doc.createElement("style");
-            s.textContent = [
-              "* { font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif !important; }",
-              "[data-noprint] { display: none !important; }",
-              ".edit-placeholder { display: none !important; }",
-              "input, textarea { display: none !important; }",
-              ".iv-page { transform: none !important; }",
-              // Hide editable field borders in PDF
-              ".editable-field { outline: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; }",
-            ].join(" ");
-            doc.head.appendChild(s);
-          }
+  doc.querySelectorAll("[data-noprint]").forEach(n => { n.style.display = "none"; });
+  doc.querySelectorAll(".edit-placeholder").forEach(n => { n.style.display = "none"; });
+  doc.querySelectorAll(".row-hover-bg").forEach(n => { n.style.background = "transparent"; });
+
+  const s = doc.createElement("style");
+  s.textContent = [
+    "* { font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif !important; }",
+    "[data-noprint] { display: none !important; }",
+    ".edit-placeholder { display: none !important; }",
+    "input, textarea { display: none !important; border: none !important; box-shadow: none !important; background: transparent !important; }",
+    ".iv-page { transform: none !important; }",
+    ".editable-field { outline: none !important; border: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; border-radius: 0 !important; }",
+  ].join(" ");
+  doc.head.appendChild(s);
+}
+
+
         });
         const imgData = canvas.toDataURL("image/jpeg", qual);
         const r=pW/canvas.width, h=Math.min(canvas.height*r,pH);
