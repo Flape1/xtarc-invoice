@@ -412,10 +412,10 @@ function AddRowMenu({ onAdd }) {
 
 /* ─── SETTINGS DRAWER ───────────────────────────────────────────────────── */
 function SettingsDrawer({ inv, set, allCurrencies, onAddCurrency, onClose, onSaveDefaultSig, ui }) {
-  const [sigMode,  setSigMode]  = useState("none");
-  const [proc,     setProc]     = useState(false);
-  const [ncc,      setNcc]      = useState("");
-  const [ncs,      setNcs]      = useState("");
+  const [sigMode, setSigMode] = useState("none");
+  const [proc, setProc] = useState(false);
+  const [ncc, setNcc] = useState("");
+  const [ncs, setNcs] = useState("");
   const fRef = useRef(null);
 
   const handleFile = file => {
@@ -423,179 +423,464 @@ function SettingsDrawer({ inv, set, allCurrencies, onAddCurrency, onClose, onSav
     setProc(true);
     const r = new FileReader();
     r.onload = e => processSignatureImg(e.target.result, c => {
-      onSaveDefaultSig(c); setProc(false); setSigMode("none");
+      onSaveDefaultSig(c);
+      setProc(false);
+      setSigMode("none");
     });
     r.readAsDataURL(file);
   };
 
-  const iStyle = {width:"100%",boxSizing:"border-box",padding:"8px 11px",border:`1px solid ${ui.inputBorder}`,borderRadius:"8px",fontSize:"13px",color:ui.text,background:ui.inputBg,outline:"none",fontFamily:"inherit"};
-  const onFoc  = e => { e.target.style.borderColor = C.accent; e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.12)"; };
-  const onBlr  = e => { e.target.style.borderColor = ui.inputBorder; e.target.style.boxShadow = "none"; };
-  const Inp    = ({v,c,ph,t="text"}) => <input type={t} value={v} onChange={e=>c(e.target.value)} placeholder={ph||""} style={iStyle} onFocus={onFoc} onBlur={onBlr}/>;
-  const Sel    = ({v,c,opts}) => <select value={v} onChange={e=>c(e.target.value)} style={{...iStyle,cursor:"pointer"}} onFocus={onFoc} onBlur={onBlr}>{opts.map(([val,lbl])=><option key={val} value={val}>{lbl}</option>)}</select>;
-  const FL     = ({l,children}) => <div style={{marginBottom:"14px"}}><div style={{fontSize:"11px",fontWeight:600,color:ui.muted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:"5px"}}>{l}</div>{children}</div>;
-  const Sec    = ({children}) => <div style={{fontSize:"11px",fontWeight:700,color:ui.section,textTransform:"uppercase",letterSpacing:"0.08em",margin:"24px 0 14px",paddingBottom:"8px",borderBottom:`1px solid ${ui.softBorder}`}}>{children}</div>;
+  const iStyle = {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "10px 12px",
+    border: `1px solid ${ui.inputBorder}`,
+    borderRadius: "0px",
+    fontSize: "13px",
+    color: ui.text,
+    background: ui.inputBg,
+    outline: "none",
+    fontFamily: "inherit",
+  };
+
+  const onFoc = e => {
+    e.target.style.borderColor = C.accent;
+    e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.12)";
+  };
+
+  const onBlr = e => {
+    e.target.style.borderColor = ui.inputBorder;
+    e.target.style.boxShadow = "none";
+  };
+
+  const Inp = ({ v, c, ph, t = "text" }) => (
+    <input
+      type={t}
+      value={v}
+      onChange={e => c(e.target.value)}
+      placeholder={ph || ""}
+      style={iStyle}
+      onFocus={onFoc}
+      onBlur={onBlr}
+    />
+  );
+
+  const Sel = ({ v, c, opts }) => (
+    <select
+      value={v}
+      onChange={e => c(e.target.value)}
+      style={{ ...iStyle, cursor: "pointer" }}
+      onFocus={onFoc}
+      onBlur={onBlr}
+    >
+      {opts.map(([val, lbl]) => (
+        <option key={val} value={val}>{lbl}</option>
+      ))}
+    </select>
+  );
+
+  const Field = ({ l, children }) => (
+    <div style={{ marginBottom: "14px" }}>
+      <div style={{
+        fontSize: "11px",
+        fontWeight: 600,
+        color: ui.muted,
+        textTransform: "uppercase",
+        letterSpacing: "0.07em",
+        marginBottom: "6px"
+      }}>
+        {l}
+      </div>
+      {children}
+    </div>
+  );
+
+  const Section = ({ title, children }) => (
+    <div style={{
+      border: `1px solid ${ui.border}`,
+      background: ui.card,
+      padding: "16px",
+      marginBottom: "14px"
+    }}>
+      <div style={{
+        fontSize: "11px",
+        fontWeight: 700,
+        color: ui.section,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        marginBottom: "14px"
+      }}>
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+
+  const ghostBtn = {
+    ...GBS("outline"),
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 0,
+  };
+
+  const darkBtn = {
+    ...GBS("dark"),
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 0,
+  };
 
   return (
-    <div style={{position:"fixed",top:0,right:0,bottom:0,
-      width:"min(320px, 100vw)",background:ui.panel,
-      borderLeft:`1px solid ${ui.border}`,zIndex:500,overflowY:"auto",
-      fontFamily:"Inter,system-ui,sans-serif",display:"flex",flexDirection:"column"}}>
-
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-        padding:"16px 20px",borderBottom:`1px solid ${ui.softBorder}`,
-        position:"sticky",top:0,background:ui.panel,zIndex:1}}>
-        <span style={{fontSize:"14px",fontWeight:600,color:ui.text,letterSpacing:"-0.1px"}}>Settings</span>
-        <button onClick={onClose}
-          style={{background:"none",border:"none",cursor:"pointer",color:ui.muted,
-            width:"28px",height:"28px",borderRadius:"6px",fontSize:"18px",
-            display:"flex",alignItems:"center",justifyContent:"center"}}
-          onMouseEnter={e=>{e.currentTarget.style.background=ui.hover;e.currentTarget.style.color=ui.text;}}
-          onMouseLeave={e=>{e.currentTarget.style.background="none";e.currentTarget.style.color=C.gray400;}}>×</button>
-      </div>
-
-      <div style={{padding:"0 20px 32px",flex:1}}>
-        <Sec>Currency</Sec>
-        <FL l="Active currency">
-          <Sel v={inv.currency} c={v=>set("currency",v)} opts={allCurrencies.map(c=>[c.code,`${c.sym} — ${c.code}`])}/>
-        </FL>
-        <FL l="Add custom currency">
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px",marginBottom:"6px"}}>
-            <input value={ncc} onChange={e=>setNcc(e.target.value.toUpperCase())} placeholder="Code" maxLength={6} style={{...iStyle,padding:"7px 10px",fontSize:"12px"}} onFocus={onFoc} onBlur={onBlr}/>
-            <input value={ncs} onChange={e=>setNcs(e.target.value)} placeholder="Symbol" maxLength={8} style={{...iStyle,padding:"7px 10px",fontSize:"12px"}} onFocus={onFoc} onBlur={onBlr}/>
+    <div style={{
+      position: "fixed",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width: "min(380px, 100vw)",
+      background: ui.panel,
+      borderLeft: `1px solid ${ui.border}`,
+      zIndex: 500,
+      overflowY: "auto",
+      fontFamily: "Inter,system-ui,sans-serif",
+      display: "flex",
+      flexDirection: "column"
+    }}>
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "18px 20px",
+        borderBottom: `1px solid ${ui.border}`,
+        position: "sticky",
+        top: 0,
+        background: ui.panel,
+        zIndex: 1
+      }}>
+        <div>
+          <div style={{ fontSize: "15px", fontWeight: 600, color: ui.text }}>
+            Invoice Settings
           </div>
-          <button onClick={()=>{if(ncc&&ncs){onAddCurrency({code:ncc.trim(),sym:ncs.trim()});setNcc("");setNcs("");}}} style={{...GBS("dark"),width:"100%",padding:"8px"}}>Add Currency</button>
-        </FL>
-
-        <Sec>Table Layout</Sec>
-        <FL l="Column mode">
-          <Sel v={inv.columnMode} c={v=>set("columnMode",v)} opts={[["1","Single column"],["2","Two columns (Qty + Rate)"]]}/>
-        </FL>
-        <FL l={inv.columnMode==="1"?"Column header name":"Description column"}>
-          <Inp v={inv.col1Name||""} c={v=>set("col1Name",v)} ph="Description"/>
-        </FL>
-        {inv.columnMode==="2" && <>
-          <FL l="Unit cost column"><Inp v={inv.col2Name||""} c={v=>set("col2Name",v)} ph="Unit Cost"/></FL>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
-            <FL l="Qty column"><Inp v={inv.col3Name||""} c={v=>set("col3Name",v)} ph="Qty"/></FL>
-            <FL l="Amount column"><Inp v={inv.col4Name||""} c={v=>set("col4Name",v)} ph="Amount"/></FL>
+          <div style={{ fontSize: "11px", color: ui.muted, marginTop: "2px", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            Layout and defaults
           </div>
-        </>}
-
-        <Sec>Tax &amp; Discount</Sec>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"14px"}}>
-          <FL l="Tax %"><Inp v={inv.taxRate||""} c={v=>set("taxRate",v)} ph="e.g. 17" t="number"/></FL>
-          <FL l="Discount %"><Inp v={inv.discountRate||""} c={v=>set("discountRate",v)} ph="e.g. 10" t="number"/></FL>
         </div>
 
-        <Sec>Invoice Status <span style={{fontWeight:400,textTransform:"none",fontSize:"10px"}}>(optional)</span></Sec>
-        <FL l="Status">
-          <Sel v={inv.status||""} c={v=>set("status",v)} opts={[["","None"],["Draft","Draft"],["Sent","Sent"],["Paid","Paid"],["Overdue","Overdue"]]}/>
-        </FL>
+        <button
+          onClick={onClose}
+          style={{
+            background: "transparent",
+            border: `1px solid ${ui.border}`,
+            color: ui.muted,
+            width: "34px",
+            height: "34px",
+            borderRadius: 0,
+            cursor: "pointer",
+            fontSize: "16px"
+          }}
+        >
+          x
+        </button>
+      </div>
 
-        <Sec>Default Signature</Sec>
-        <p style={{fontSize:"12px",color:C.gray400,lineHeight:1.6,marginBottom:"12px",marginTop:0}}>
-          Stored in your browser. Appears on every invoice automatically.
-        </p>
+      <div style={{ padding: "18px", flex: 1 }}>
+        <Section title="Currency">
+          <Field l="Active currency">
+            <Sel
+              v={inv.currency}
+              c={v => set("currency", v)}
+              opts={allCurrencies.map(c => [c.code, `${c.sym} - ${c.code}`])}
+            />
+          </Field>
 
-        {inv.signatureDataUrl && sigMode==="none" && (
-          <div style={{border:`1px solid ${C.gray100}`,borderRadius:"10px",padding:"16px",background:C.gray50,marginBottom:"12px"}}>
-            <img src={inv.signatureDataUrl} alt="sig" style={{height:"60px",maxWidth:"100%",objectFit:"contain",display:"block",marginBottom:"12px"}}/>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px"}}>
-              <button onClick={()=>setSigMode("draw")} style={{...GBS("outline"),fontSize:"11px",padding:"6px 8px"}}>✏️ Redraw</button>
-              <button onClick={()=>setSigMode("type")} style={{...GBS("outline"),fontSize:"11px",padding:"6px 8px"}}>Aa Retype</button>
-              <button onClick={()=>fRef.current.click()} style={{...GBS("outline"),fontSize:"11px",padding:"6px 8px"}}>↑ Upload</button>
-              <button onClick={()=>onSaveDefaultSig("")} style={{...GBS("danger"),fontSize:"11px",padding:"6px 8px"}}>Remove</button>
+          <Field l="Add custom currency">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
+              <input
+                value={ncc}
+                onChange={e => setNcc(e.target.value.toUpperCase())}
+                placeholder="Code"
+                maxLength={6}
+                style={{ ...iStyle }}
+                onFocus={onFoc}
+                onBlur={onBlr}
+              />
+              <input
+                value={ncs}
+                onChange={e => setNcs(e.target.value)}
+                placeholder="Symbol"
+                maxLength={8}
+                style={{ ...iStyle }}
+                onFocus={onFoc}
+                onBlur={onBlr}
+              />
             </div>
+            <button
+              onClick={() => {
+                if (ncc && ncs) {
+                  onAddCurrency({ code: ncc.trim(), sym: ncs.trim() });
+                  setNcc("");
+                  setNcs("");
+                }
+              }}
+              style={darkBtn}
+            >
+              Add Currency
+            </button>
+          </Field>
+        </Section>
+
+        <Section title="Table Layout">
+          <Field l="Column mode">
+            <Sel
+              v={inv.columnMode}
+              c={v => set("columnMode", v)}
+              opts={[["1", "Single column"], ["2", "Two columns"]]}
+            />
+          </Field>
+
+          <Field l={inv.columnMode === "1" ? "Column header" : "Description column"}>
+            <Inp v={inv.col1Name || ""} c={v => set("col1Name", v)} ph="Description" />
+          </Field>
+
+          {inv.columnMode === "2" && (
+            <>
+              <Field l="Unit cost column">
+                <Inp v={inv.col2Name || ""} c={v => set("col2Name", v)} ph="Unit Cost" />
+              </Field>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <Field l="Qty column">
+                  <Inp v={inv.col3Name || ""} c={v => set("col3Name", v)} ph="Qty" />
+                </Field>
+                <Field l="Amount column">
+                  <Inp v={inv.col4Name || ""} c={v => set("col4Name", v)} ph="Amount" />
+                </Field>
+              </div>
+            </>
+          )}
+        </Section>
+
+        <Section title="Totals">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <Field l="Tax %">
+              <Inp v={inv.taxRate || ""} c={v => set("taxRate", v)} ph="e.g. 17" t="number" />
+            </Field>
+            <Field l="Discount %">
+              <Inp v={inv.discountRate || ""} c={v => set("discountRate", v)} ph="e.g. 10" t="number" />
+            </Field>
           </div>
-        )}
-        {!inv.signatureDataUrl && sigMode==="none" && (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px",marginBottom:"12px"}}>
-            {[{id:"draw",l:"✏️ Draw"},{id:"type",l:"Aa Type"},{id:"upload",l:"↑ Upload"}].map(m=>(
-              <button key={m.id} onClick={()=>m.id==="upload"?fRef.current.click():setSigMode(m.id)}
-                style={{...GBS("outline"),padding:"10px 6px",fontSize:"12px",textAlign:"center"}}>{m.l}</button>
-            ))}
-          </div>
-        )}
-        <input ref={fRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>handleFile(e.target.files[0])}/>
-        {sigMode==="draw" && <DrawPad onSave={d=>{onSaveDefaultSig(d);setSigMode("none");}} onCancel={()=>setSigMode("none")}/>}
-        {sigMode==="type" && <TypeSig name={inv.founderLabel} onSave={d=>{onSaveDefaultSig(d);setSigMode("none");}} onCancel={()=>setSigMode("none")}/>}
+
+          <Field l="Status">
+            <Sel
+              v={inv.status || ""}
+              c={v => set("status", v)}
+              opts={[["", "None"], ["Draft", "Draft"], ["Sent", "Sent"], ["Paid", "Paid"], ["Overdue", "Overdue"]]}
+            />
+          </Field>
+        </Section>
+
+        <Section title="Default Signature">
+          <p style={{ fontSize: "12px", color: ui.muted, lineHeight: 1.6, margin: "0 0 12px" }}>
+            Stored in your browser. Applied to every invoice by default.
+          </p>
+
+          {inv.signatureDataUrl && sigMode === "none" && (
+            <div style={{
+              border: `1px solid ${ui.border}`,
+              background: ui.panelAlt,
+              padding: "14px",
+              marginBottom: "12px"
+            }}>
+              <img
+                src={inv.signatureDataUrl}
+                alt="sig"
+                style={{ height: "60px", maxWidth: "100%", objectFit: "contain", display: "block", marginBottom: "12px" }}
+              />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                <button onClick={() => setSigMode("draw")} style={ghostBtn}>Redraw</button>
+                <button onClick={() => setSigMode("type")} style={ghostBtn}>Retype</button>
+                <button onClick={() => fRef.current.click()} style={ghostBtn}>Upload</button>
+                <button onClick={() => onSaveDefaultSig("")} style={{ ...GBS("danger"), width: "100%", padding: "10px 12px", borderRadius: 0 }}>Remove</button>
+              </div>
+            </div>
+          )}
+
+          {!inv.signatureDataUrl && sigMode === "none" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "12px" }}>
+              {[{ id: "draw", l: "Draw" }, { id: "type", l: "Type" }, { id: "upload", l: "Upload" }].map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => m.id === "upload" ? fRef.current.click() : setSigMode(m.id)}
+                  style={{ ...ghostBtn, padding: "10px 6px" }}
+                >
+                  {m.l}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <input
+            ref={fRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={e => handleFile(e.target.files[0])}
+          />
+
+          {proc && <div style={{ fontSize: "12px", color: ui.muted, marginBottom: "12px" }}>Processing...</div>}
+          {sigMode === "draw" && <DrawPad onSave={d => { onSaveDefaultSig(d); setSigMode("none"); }} onCancel={() => setSigMode("none")} />}
+          {sigMode === "type" && <TypeSig name={inv.founderLabel} onSave={d => { onSaveDefaultSig(d); setSigMode("none"); }} onCancel={() => setSigMode("none")} />}
+        </Section>
       </div>
     </div>
   );
 }
 
-/* ─── TEMPLATES MODAL ───────────────────────────────────────────────────── */
+/* ───  Templates modal ───────────────────────────────────────────────────── */
+
 function TemplatesModal({ inv, onLoad, onClose, ui }) {
   const [tpls, setTpls] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("xtarc_tpl")||"[]"); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem("xtarc_tpl") || "[]"); }
+    catch { return []; }
   });
   const [name, setName] = useState("");
 
   const save = () => {
     if (!name.trim()) return;
-    const t = {id:uid(),name:name.trim(),savedAt:new Date().toLocaleDateString("en-GB"),
-      clientName:inv.clientName, data:{...inv,items:inv.items.map(i=>({...i}))}};
-    const u = [t,...tpls.filter(x=>x.name!==name.trim())];
-    setTpls(u); localStorage.setItem("xtarc_tpl",JSON.stringify(u)); setName("");
+    const t = {
+      id: uid(),
+      name: name.trim(),
+      savedAt: new Date().toLocaleDateString("en-GB"),
+      clientName: inv.clientName,
+      data: { ...inv, items: inv.items.map(i => ({ ...i })) }
+    };
+    const u = [t, ...tpls.filter(x => x.name !== name.trim())];
+    setTpls(u);
+    localStorage.setItem("xtarc_tpl", JSON.stringify(u));
+    setName("");
   };
+
   const del = id => {
-    const u = tpls.filter(t=>t.id!==id);
-    setTpls(u); localStorage.setItem("xtarc_tpl",JSON.stringify(u));
+    const u = tpls.filter(t => t.id !== id);
+    setTpls(u);
+    localStorage.setItem("xtarc_tpl", JSON.stringify(u));
   };
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.2)",zIndex:600,
-      display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-      <div style={{background:C.white,borderRadius:"14px",
-        width:"min(480px, calc(100vw - 32px))",maxHeight:"80vh",
-        display:"flex",flexDirection:"column",
-        boxShadow:"0 20px 60px rgba(0,0,0,0.15)",border:`1px solid ${C.gray200}`,
-        fontFamily:"Inter,system-ui,sans-serif"}}>
-
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-          padding:"18px 22px",borderBottom:`1px solid ${C.gray100}`}}>
+    <div style={{
+      position: "fixed",
+      inset: 0,
+      background: ui.overlay,
+      zIndex: 600,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "20px"
+    }}>
+      <div style={{
+        background: ui.panel,
+        border: `1px solid ${ui.border}`,
+        width: "min(620px, calc(100vw - 32px))",
+        maxHeight: "82vh",
+        display: "flex",
+        flexDirection: "column",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.35)"
+      }}>
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "18px 22px",
+          borderBottom: `1px solid ${ui.border}`
+        }}>
           <div>
-            <div style={{fontSize:"15px",fontWeight:600,color:C.gray900}}>Templates</div>
-            <div style={{fontSize:"12px",color:C.gray400,marginTop:"2px"}}>Save and reuse invoice structures</div>
+            <div style={{ fontSize: "15px", fontWeight: 600, color: ui.text }}>Templates</div>
+            <div style={{ fontSize: "11px", color: ui.muted, marginTop: "2px", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Saved invoice setups
+            </div>
           </div>
-          <button onClick={onClose}
-            style={{background:"none",border:"none",cursor:"pointer",color:C.gray400,
-              fontSize:"20px",width:"32px",height:"32px",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:"6px"}}
-            onMouseEnter={e=>e.currentTarget.style.background=C.gray100}
-            onMouseLeave={e=>e.currentTarget.style.background="none"}>×</button>
+
+          <button
+            onClick={onClose}
+            style={{
+              background: "transparent",
+              border: `1px solid ${ui.border}`,
+              color: ui.muted,
+              width: "34px",
+              height: "34px",
+              cursor: "pointer",
+              fontSize: "16px"
+            }}
+          >
+            x
+          </button>
         </div>
 
-        <div style={{padding:"16px 22px",borderBottom:`1px solid ${C.gray100}`}}>
-          <div style={{display:"flex",gap:"8px"}}>
-            <input value={name} onChange={e=>setName(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&save()}
-              placeholder="Name this template…"
-              style={{flex:1,padding:"8px 12px",border:`1px solid ${C.gray200}`,borderRadius:"8px",
-                fontSize:"13px",color:C.gray900,outline:"none",fontFamily:"inherit"}}
-              onFocus={e=>e.target.style.borderColor=C.accent}
-              onBlur={e=>e.target.style.borderColor=C.gray200}/>
-            <button onClick={save} style={{...GBS("dark"),padding:"8px 16px"}}>Save current</button>
+        <div style={{ padding: "16px 22px", borderBottom: `1px solid ${ui.border}` }}>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && save()}
+              placeholder="Name this template..."
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                border: `1px solid ${ui.inputBorder}`,
+                borderRadius: 0,
+                fontSize: "13px",
+                color: ui.text,
+                background: ui.inputBg,
+                outline: "none",
+                fontFamily: "inherit"
+              }}
+            />
+            <button onClick={save} style={{ ...GBS("dark"), padding: "10px 16px", borderRadius: 0 }}>
+              Save current
+            </button>
           </div>
         </div>
 
-        <div style={{flex:1,overflowY:"auto",padding:"12px 22px"}}>
-          {tpls.length===0 && (
-            <div style={{textAlign:"center",padding:"32px 0",color:C.gray400,fontSize:"13px"}}>
-              No templates saved yet. Fill in an invoice and save it above.
+        <div style={{ flex: 1, overflowY: "auto", padding: "14px 22px" }}>
+          {tpls.length === 0 && (
+            <div style={{ textAlign: "center", padding: "36px 0", color: ui.muted, fontSize: "13px" }}>
+              No templates saved yet.
             </div>
           )}
-          {tpls.map(t=>(
-            <div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-              padding:"12px 14px",border:`1px solid ${C.gray100}`,borderRadius:"10px",
-              marginBottom:"8px",background:C.gray50}}>
-              <div>
-                <div style={{fontSize:"13px",fontWeight:600,color:C.gray900}}>{t.name}</div>
-                <div style={{fontSize:"11px",color:C.gray400,marginTop:"2px"}}>{t.savedAt} · {t.clientName||"—"}</div>
+
+          {tpls.map(t => (
+            <div
+              key={t.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "12px",
+                padding: "14px 16px",
+                border: `1px solid ${ui.border}`,
+                background: ui.panelAlt,
+                marginBottom: "10px"
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: ui.text }}>{t.name}</div>
+                <div style={{ fontSize: "11px", color: ui.muted, marginTop: "3px" }}>
+                  {t.savedAt} - {t.clientName || "-"}
+                </div>
               </div>
-              <div style={{display:"flex",gap:"6px"}}>
-                <button onClick={()=>{onLoad(t.data);onClose();}} style={{...GBS("outline"),fontSize:"12px",padding:"5px 12px"}}>Load</button>
-                <button onClick={()=>del(t.id)} style={{...GBS("danger"),fontSize:"12px",padding:"5px 10px"}}>×</button>
+
+              <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                <button
+                  onClick={() => { onLoad(t.data); onClose(); }}
+                  style={{ ...GBS("outline"), fontSize: "12px", padding: "8px 12px", borderRadius: 0 }}
+                >
+                  Load
+                </button>
+                <button
+                  onClick={() => del(t.id)}
+                  style={{ ...GBS("danger"), fontSize: "12px", padding: "8px 10px", borderRadius: 0 }}
+                >
+                  x
+                </button>
               </div>
             </div>
           ))}
@@ -604,6 +889,7 @@ function TemplatesModal({ inv, onLoad, onClose, ui }) {
     </div>
   );
 }
+
 
 /* ─── PAGINATE ──────────────────────────────────────────────────────────── */
 function paginate(items, n) {
@@ -779,20 +1065,18 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, SIG_B64_FALLBACK }) 
 function MobileScaler({ children }) {
   const [scale, setScale] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
-  const wrapRef = useRef(null);
 
   useEffect(() => {
     const measure = () => {
       const vw = window.innerWidth;
       if (vw < 860) {
-        // On mobile/tablet, scale the 794px invoice to fit viewport
         const padding = vw < 480 ? 8 : 16;
         const available = vw - padding * 2;
         const s = Math.min(available / 794, 1);
         setScale(s);
         setIsMobile(true);
       } else {
-        setScale(0.88); // desktop default
+        setScale(0.88);
         setIsMobile(false);
       }
     };
@@ -802,18 +1086,24 @@ function MobileScaler({ children }) {
   }, []);
 
   return (
-    <div ref={wrapRef} style={{
-      width: isMobile ? `${794 * scale}px` : "794px",
-      height: isMobile ? `${1123 * scale}px` : "auto",
-      transformOrigin: "top left",
-      transform: `scale(${scale})`,
-      marginBottom: isMobile ? `${(1123 * scale - 1123) + 60}px` : "60px",
-      flexShrink: 0,
-    }}>
-      {children}
+    <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+      <div
+        style={{
+          width: isMobile ? `${794 * scale}px` : "794px",
+          height: isMobile ? `${1123 * scale}px` : "auto",
+          transformOrigin: "top center",
+          transform: `scale(${scale})`,
+          margin: "0 auto",
+          marginBottom: isMobile ? `${(1123 * scale - 1123) + 60}px` : "60px",
+          flexShrink: 0,
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
+
 
 /* ─── MAIN APP ──────────────────────────────────────────────────────────── */
 export default function App() {
@@ -847,14 +1137,41 @@ export default function App() {
   const qualRef = useRef(null);
   const allCurrencies = [...BASE_CURRENCIES, ...(inv.customCurrencies||[])];
   const UI = dark ? {
-    bg:"#050608", panel:"#0b0d11", border:"rgba(255,255,255,0.12)", softBorder:"rgba(255,255,255,0.08)",
-    text:"#f4f7fb", muted:"#9ba7b5", section:"#6f7b89", hover:"rgba(255,255,255,0.06)",
-    inputBg:"#12161c", inputBorder:"rgba(255,255,255,0.14)", overlay:"rgba(0,0,0,0.52)"
+    bg: "#050608",
+    bgAlt: "#090b0f",
+    panel: "#0b0d11",
+    panelAlt: "#11151b",
+    card: "#0f1318",
+    border: "rgba(255,255,255,0.12)",
+    softBorder: "rgba(255,255,255,0.07)",
+    text: "#f3f5f7",
+    muted: "#98a2ad",
+    section: "#6b7480",
+    hover: "rgba(255,255,255,0.05)",
+    inputBg: "#12161c",
+    inputBorder: "rgba(255,255,255,0.14)",
+    overlay: "rgba(0,0,0,0.58)",
+    topbar: "rgba(5,6,8,0.9)",
+    stageShadow: "0 24px 70px rgba(0,0,0,0.45)",
   } : {
-    bg:C.gray100, panel:C.white, border:C.gray200, softBorder:C.gray100,
-    text:C.gray900, muted:C.gray500, section:C.gray300, hover:C.gray100,
-    inputBg:C.white, inputBorder:C.gray200, overlay:"rgba(0,0,0,0.18)"
+    bg: "#f3f5f7",
+    bgAlt: "#eceff3",
+    panel: "#ffffff",
+    panelAlt: "#f8fafb",
+    card: "#ffffff",
+    border: "#d9dfe6",
+    softBorder: "#eaedf1",
+    text: "#16181d",
+    muted: "#6b7280",
+    section: "#9aa3ad",
+    hover: "#f3f4f6",
+    inputBg: "#ffffff",
+    inputBorder: "#d9dfe6",
+    overlay: "rgba(0,0,0,0.18)",
+    topbar: "rgba(255,255,255,0.92)",
+    stageShadow: "0 18px 45px rgba(15,23,42,0.08)",
   };
+
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -998,62 +1315,147 @@ export default function App() {
       `}</style>
 
       {showTemplates && (
-        <TemplatesModal inv={inv}
+        <TemplatesModal
+          inv={inv}
           ui={UI}
-          onLoad={d=>setInv({...d,items:(d.items||[]).map(i=>({...i,id:uid()}))})}
-          onClose={()=>setShowTemplates(false)}/>
+          onLoad={d => setInv({ ...d, items: (d.items || []).map(i => ({ ...i, id: uid() })) })}
+          onClose={() => setShowTemplates(false)}
+        />
       )}
 
-      <div style={{minHeight:"100vh",background:`radial-gradient(circle at top left, ${dark ? "rgba(37,99,235,0.12)" : "rgba(37,99,235,0.06)"} 0, transparent 30%), ${UI.bg}`}}>
-
-        {/* Top bar */}
-        <div style={{
-          minHeight:"56px",background:dark ? "rgba(5,6,8,0.9)" : "rgba(255,255,255,0.92)",borderBottom:`1px solid ${UI.border}`,
-          backdropFilter:"blur(16px)",
-          display:"flex",alignItems:"center",justifyContent:"space-between",
-          padding:"0 16px",position:"sticky",top:0,zIndex:300,
-          flexWrap:"wrap",gap:"8px",paddingTop:"8px",paddingBottom:"8px"}}>
-
-          <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-            {assets.logo && <img src={assets.logo} alt="XTARC" style={{height:"26px",width:"26px",objectFit:"contain",borderRadius:"3px"}}/>}
+      <div
+        style={{
+          minHeight: "100vh",
+          background: `radial-gradient(circle at top left, ${dark ? "rgba(37,99,235,0.12)" : "rgba(37,99,235,0.06)"} 0, transparent 30%), ${UI.bg}`
+        }}
+      >
+        <div
+          style={{
+            minHeight: "68px",
+            background: UI.topbar,
+            borderBottom: `1px solid ${UI.border}`,
+            backdropFilter: "blur(16px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "10px 18px",
+            position: "sticky",
+            top: 0,
+            zIndex: 300,
+            flexWrap: "wrap",
+            gap: "10px"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            {assets.logo && (
+              <img
+                src={assets.logo}
+                alt="XTARC"
+                style={{ height: "28px", width: "28px", objectFit: "contain", borderRadius: "3px" }}
+              />
+            )}
             <div>
-              <div style={{fontSize:"15px",fontWeight:600,color:UI.text}}>XTARC Invoice Builder</div>
-              <div className="topbar-hint" style={{fontSize:"11px",color:UI.muted,marginTop:"2px",letterSpacing:"0.05em",textTransform:"uppercase"}}>Edit in place · export clean PDF</div>
+              <div style={{ fontSize: "15px", fontWeight: 600, color: UI.text }}>XTARC Invoice Builder</div>
+              <div
+                className="topbar-hint"
+                style={{
+                  fontSize: "11px",
+                  color: UI.muted,
+                  marginTop: "2px",
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase"
+                }}
+              >
+                Edit in place - export clean PDF
+              </div>
             </div>
           </div>
 
-          <div className="topbar-actions" style={{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"}}>
-            <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={{...GBS(canUndo?"outline":"ghost"),padding:"5px 9px",fontSize:"14px"}}>↩</button>
-            <button onClick={redo} disabled={!canRedo} title="Redo"          style={{...GBS(canRedo?"outline":"ghost"),padding:"5px 9px",fontSize:"14px"}}>↪</button>
-            <div style={{width:"1px",height:"14px",background:UI.border,margin:"0 2px"}}/>
-            <button onClick={()=>setDark(v=>!v)} style={{...GBS(dark?"dark":"outline"),fontSize:"12px"}}><span>{dark ? "☀" : "☾"}</span><span className="topbar-btn-label"> {dark ? "Light" : "Dark"}</span></button>
-            <button onClick={()=>setShowTemplates(true)} style={{...GBS("outline"),fontSize:"12px"}}><span>📋</span><span className="topbar-btn-label"> Templates</span></button>
-            <button onClick={()=>setShowSettings(s=>!s)} style={{...GBS(showSettings?"dark":"outline"),fontSize:"12px"}}><span>⚙</span><span className="topbar-btn-label"> Settings</span></button>
-            {/* Export PDF + Quality split button */}
-            <div ref={qualRef} style={{position:"relative",display:"flex"}}>
-              <button onClick={handleExport} disabled={loading}
-                style={{...GBS(loading?"ghost":"dark"),padding:"6px 14px",fontSize:"12px",
-                  borderRadius:"7px 0 0 7px",borderRight:"1px solid rgba(255,255,255,0.12)",minWidth:"100px"}}>
-                {loading ? "Generating…" : "Export PDF"}
+          <div className="topbar-actions" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={{ ...GBS(canUndo ? "outline" : "ghost"), padding: "8px 11px", fontSize: "14px", borderRadius: 0 }}>
+              Undo
+            </button>
+            <button onClick={redo} disabled={!canRedo} title="Redo" style={{ ...GBS(canRedo ? "outline" : "ghost"), padding: "8px 11px", fontSize: "14px", borderRadius: 0 }}>
+              Redo
+            </button>
+            <div style={{ width: "1px", height: "18px", background: UI.border, margin: "0 2px" }} />
+            <button onClick={() => setDark(v => !v)} style={{ ...GBS(dark ? "dark" : "outline"), fontSize: "12px", borderRadius: 0 }}>
+              {dark ? "Light" : "Dark"}
+            </button>
+            <button onClick={() => setShowTemplates(true)} style={{ ...GBS("outline"), fontSize: "12px", borderRadius: 0 }}>
+              Templates
+            </button>
+            <button onClick={() => setShowSettings(s => !s)} style={{ ...GBS(showSettings ? "dark" : "outline"), fontSize: "12px", borderRadius: 0 }}>
+              Settings
+            </button>
+
+            <div ref={qualRef} style={{ position: "relative", display: "flex" }}>
+              <button
+                onClick={handleExport}
+                disabled={loading}
+                style={{
+                  ...GBS(loading ? "ghost" : "dark"),
+                  padding: "8px 14px",
+                  fontSize: "12px",
+                  borderRadius: 0,
+                  borderRight: "1px solid rgba(255,255,255,0.12)",
+                  minWidth: "110px"
+                }}
+              >
+                {loading ? "Generating..." : "Export PDF"}
               </button>
-              <button onClick={()=>setShowQual(o=>!o)}
-                style={{...GBS(loading?"ghost":"dark"),padding:"6px 9px",fontSize:"11px",
-                  borderRadius:"0 7px 7px 0",borderLeft:"1px solid rgba(255,255,255,0.08)"}}>
-                {QL[inv.pdfQuality]||"Med"} ▾
+              <button
+                onClick={() => setShowQual(o => !o)}
+                style={{
+                  ...GBS(loading ? "ghost" : "dark"),
+                  padding: "8px 10px",
+                  fontSize: "11px",
+                  borderRadius: 0,
+                  borderLeft: "1px solid rgba(255,255,255,0.08)"
+                }}
+              >
+                {QL[inv.pdfQuality] || "Med"}
               </button>
+
               {showQual && (
-                <div style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:UI.panel,
-                  border:`1px solid ${UI.border}`,borderRadius:"8px",
-                  boxShadow:"0 12px 30px rgba(0,0,0,0.32)",zIndex:100,overflow:"hidden",minWidth:"170px"}}>
-                  {[{v:"low",l:"Low quality",d:"Small file size"},{v:"medium",l:"Medium quality",d:"Recommended"},{v:"high",l:"High quality",d:"Sharp, larger file"}].map(({v,l,d})=>(
-                    <button key={v} onClick={()=>{setInv(p=>({...p,pdfQuality:v}));setShowQual(false);}}
-                      style={{display:"block",width:"100%",padding:"10px 14px",
-                        background:inv.pdfQuality===v?UI.hover:"none",border:"none",
-                        textAlign:"left",cursor:"pointer",fontFamily:"inherit",borderBottom:`1px solid ${UI.softBorder}`}}
-                      onMouseEnter={e=>e.currentTarget.style.background=UI.hover}
-                      onMouseLeave={e=>e.currentTarget.style.background=inv.pdfQuality===v?UI.hover:"none"}>
-                      <div style={{fontSize:"12px",fontWeight:500,color:UI.text}}>{l}</div>
-                      <div style={{fontSize:"11px",color:UI.muted}}>{d}</div>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    right: 0,
+                    background: UI.panel,
+                    border: `1px solid ${UI.border}`,
+                    boxShadow: "0 12px 30px rgba(0,0,0,0.32)",
+                    zIndex: 100,
+                    overflow: "hidden",
+                    minWidth: "180px"
+                  }}
+                >
+                  {[
+                    { v: "low", l: "Low quality", d: "Small file size" },
+                    { v: "medium", l: "Medium quality", d: "Recommended" },
+                    { v: "high", l: "High quality", d: "Sharp, larger file" }
+                  ].map(({ v, l, d }) => (
+                    <button
+                      key={v}
+                      onClick={() => {
+                        setInv(p => ({ ...p, pdfQuality: v }));
+                        setShowQual(false);
+                      }}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: inv.pdfQuality === v ? UI.hover : "none",
+                        border: "none",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        borderBottom: `1px solid ${UI.softBorder}`
+                      }}
+                    >
+                      <div style={{ fontSize: "12px", fontWeight: 500, color: UI.text }}>{l}</div>
+                      <div style={{ fontSize: "11px", color: UI.muted }}>{d}</div>
                     </button>
                   ))}
                 </div>
@@ -1062,29 +1464,63 @@ export default function App() {
           </div>
         </div>
 
-        {/* Invoice canvas */}
-        <div className="invoice-canvas-outer" style={{padding:"32px 24px 40px",display:"flex",justifyContent:"center",overflowX:"auto"}}>
-          <div style={{background:UI.panel,border:`1px solid ${UI.border}`,borderRadius:"18px",padding:"18px",
-            boxShadow:dark ? "0 24px 70px rgba(0,0,0,0.45)" : "0 18px 45px rgba(15,23,42,0.08)"}}>
+        <div
+          className="invoice-canvas-outer"
+          style={{
+            padding: "36px 24px 48px",
+            display: "flex",
+            justifyContent: "center",
+            overflowX: "auto"
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "1160px",
+              border: `1px solid ${UI.border}`,
+              background: UI.panel,
+              padding: "24px",
+              boxShadow: UI.stageShadow
+            }}
+          >
             <MobileScaler>
-              <InvoiceCanvas inv={inv} set={setInv} allCurrencies={allCurrencies}
-                LOGO_B64={assets.logo} SIG_B64_FALLBACK={assets.sig}/>
+              <InvoiceCanvas
+                inv={inv}
+                set={setInv}
+                allCurrencies={allCurrencies}
+                LOGO_B64={assets.logo}
+                SIG_B64_FALLBACK={assets.sig}
+              />
             </MobileScaler>
           </div>
         </div>
       </div>
 
-      {/* Settings drawer */}
-      {showSettings && <>
-        <div onClick={()=>setShowSettings(false)}
-          style={{position:"fixed",inset:0,background:UI.overlay,zIndex:499}}/>
-        <SettingsDrawer inv={inv} set={(k,v)=>setInv(p=>({...p,[k]:v}))}
-          ui={UI}
-          allCurrencies={allCurrencies}
-          onAddCurrency={({code,sym})=>{if(!allCurrencies.find(c=>c.code===code))setInv(p=>({...p,customCurrencies:[...(p.customCurrencies||[]),{code,sym}],currency:code}));}}
-          onClose={()=>setShowSettings(false)}
-          onSaveDefaultSig={saveDefaultSig}/>
-      </>}
+      {showSettings && (
+        <>
+          <div
+            onClick={() => setShowSettings(false)}
+            style={{ position: "fixed", inset: 0, background: UI.overlay, zIndex: 499 }}
+          />
+          <SettingsDrawer
+            inv={inv}
+            set={(k, v) => setInv(p => ({ ...p, [k]: v }))}
+            ui={UI}
+            allCurrencies={allCurrencies}
+            onAddCurrency={({ code, sym }) => {
+              if (!allCurrencies.find(c => c.code === code)) {
+                setInv(p => ({
+                  ...p,
+                  customCurrencies: [...(p.customCurrencies || []), { code, sym }],
+                  currency: code
+                }));
+              }
+            }}
+            onClose={() => setShowSettings(false)}
+            onSaveDefaultSig={saveDefaultSig}
+          />
+        </>
+      )}
     </>
   );
 }
