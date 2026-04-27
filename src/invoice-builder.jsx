@@ -1461,10 +1461,10 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
   const [pages, setPages] = useState(() => (inv.items.length ? [inv.items] : [[]]));
   const { grand, sub, tax, disc, override } = calcGrandTotal(inv);
   const firstHeaderRef = useRef(null);
+  const printFirstHeaderRef = useRef(null);
   const continuationHeaderRef = useRef(null);
-  const tableHeaderRef = useRef(null);
-  const footerRef = useRef(null);
-  const addRowRef = useRef(null);
+  const printTableHeaderRef = useRef(null);
+  const printFooterRef = useRef(null);
   const measureRowRefs = useRef(new Map());
 
   const updItem = (id,k,v) => set(p=>({...p,items:p.items.map(it=>it.id===id?{...it,[k]:v}:it)}));
@@ -1516,11 +1516,11 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
     if (rowHeights.some(h => !h || h <= 0)) return;
 
     const innerHeight = 1123 - 56 - 56;
-    const firstHeaderHeight = firstHeaderRef.current?.getBoundingClientRect().height || 220;
+    const firstHeaderHeight = printFirstHeaderRef.current?.getBoundingClientRect().height || firstHeaderRef.current?.getBoundingClientRect().height || 220;
     const continuationHeight = continuationHeaderRef.current?.getBoundingClientRect().height || 52;
-    const tableHeaderHeight = tableHeaderRef.current?.getBoundingClientRect().height || 36;
-    const footerHeight = footerRef.current?.getBoundingClientRect().height || 280;
-    const addRowHeight = addRowRef.current?.getBoundingClientRect().height || 52;
+    const tableHeaderHeight = printTableHeaderRef.current?.getBoundingClientRect().height || 36;
+    const footerHeight = printFooterRef.current?.getBoundingClientRect().height || 280;
+    const addRowHeight = 12;
 
     const nextPages = paginateMeasured(inv.items, rowHeights, {
       firstAvail: innerHeight - firstHeaderHeight - tableHeaderHeight - 4,
@@ -1578,6 +1578,42 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
           pointerEvents:"none"
         }}
       >
+        <div ref={printFirstHeaderRef}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"48px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+              <img src={inv.logoDataUrl || LOGO_B64} alt="logo" style={{height:"32px",width:"32px",objectFit:"contain",borderRadius:"4px"}}/>
+              <div style={{fontSize:"16px",fontWeight:600,color:C.gray900,lineHeight:1.3}}>{inv.agencyName || "Agency name"}</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{...LS,marginBottom:"3px"}}>Contact</div>
+              <div style={{fontSize:"14px",color:C.gray700,lineHeight:1.35}}>{inv.agencyEmail || "email@agency.com"}</div>
+            </div>
+          </div>
+          <div style={{height:"1px",background:C.gray200,marginBottom:"40px"}}/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"52px"}}>
+            <div>
+              <div style={{...LS,marginBottom:"10px"}}>Billed To</div>
+              <div style={{fontSize:"24px",fontWeight:700,color:C.gray900,letterSpacing:"-0.4px",lineHeight:1}}>{inv.clientName || "Client name"}</div>
+            </div>
+            <div style={{textAlign:"right",display:"grid",rowGap:"12px"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:"8px"}}>
+                {sc && <span style={{fontSize:"10px",fontWeight:600,padding:"3px 8px",borderRadius:"12px",background:sc.bg,color:sc.c,letterSpacing:"0.04em"}}>{inv.status}</span>}
+                <div>
+                  <div style={{...LS,marginBottom:"3px"}}>Invoice</div>
+                  <div style={{fontSize:"15px",fontWeight:700,color:C.gray900,lineHeight:1.35}}>{inv.invoiceNo || "#00001"}</div>
+                </div>
+              </div>
+              <div>
+                <div style={{...LS,marginBottom:"3px"}}>Date</div>
+                <div style={{fontSize:"14px",color:C.gray700,lineHeight:1.35}}>{inv.date || "DD MMM YYYY"}</div>
+              </div>
+              <div>
+                <div style={{...LS,marginBottom:"3px"}}>Due Date</div>
+                <div style={{fontSize:"14px",color:C.gray700,lineHeight:1.35}}>{inv.dueDate || "—"}</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div
           ref={continuationHeaderRef}
           style={{
@@ -1591,6 +1627,17 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
         >
           <span style={{fontSize:"14px",color:C.gray500,fontWeight:500}}>{inv.agencyName} · {inv.clientName}</span>
           <span style={{fontSize:"13px",color:C.gray400}}>Page 2</span>
+        </div>
+        <div
+          ref={printTableHeaderRef}
+          style={{display:"grid",gridTemplateColumns:colGrid,gap:"12px",paddingBottom:"10px",borderBottom:`1.5px solid ${C.gray300}`,marginBottom:"2px"}}
+        >
+          <div style={LS}>{inv.col1Name||"Description"}</div>
+          {twoCol && <>
+            <div style={{...LS,textAlign:"right"}}>{inv.col2Name||"Unit Cost"}</div>
+            <div style={{...LS,textAlign:"center"}}>{inv.col3Name||"Qty"}</div>
+          </>}
+          <div style={{...LS,textAlign:"right"}}>{inv.col4Name||"Amount"}</div>
         </div>
         {inv.items.map((item, measureIdx) => (
           <InvoiceRow
@@ -1612,6 +1659,51 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
             }}
           />
         ))}
+        <div ref={printFooterRef} style={{paddingTop:"28px"}}>
+          {(inv.taxRate||inv.discountRate) && (
+            <div style={{marginBottom:"16px",paddingBottom:"16px",borderBottom:`1px solid ${C.gray100}`}}>
+              {inv.discountRate && <div style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:"12px",color:C.gray600}}><span>Discount ({inv.discountRate}%)</span><span>−{sym} {fmtNum(disc)}</span></div>}
+              {inv.taxRate && <div style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:"12px",color:C.gray600}}><span>Tax ({inv.taxRate}%)</span><span>+{sym} {fmtNum(tax)}</span></div>}
+            </div>
+          )}
+          <div style={{ display: "grid", gap: "14px", marginBottom: "32px" }}>
+            {footerOrder.map(key => (
+              <div key={`measure-${key}`}>
+                <div style={{fontSize:"11px",fontWeight:600,color:C.gray400,letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:"6px"}}>
+                  {key === "paymentTerms" ? "Payment Terms" : "Notes"}
+                </div>
+                <div style={{
+                  fontSize:"12px",
+                  color:key==="paymentTerms" ? C.gray500 : C.gray400,
+                  lineHeight:1.6,
+                  fontWeight:inv[`${key}Bold`] ? 700 : 400,
+                  fontStyle:inv[`${key}Italic`] ? "italic" : "normal"
+                }}>
+                  {key === "paymentTerms" ? (inv.paymentTerms || "Payment terms") : (inv.notes || "Notes")}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
+            <div>
+              {inv.signatureDataUrl ? (
+                <img src={inv.signatureDataUrl} alt="sig" style={{height:"72px",maxWidth:"220px",objectFit:"contain",display:"block",marginBottom:"8px"}}/>
+              ) : (
+                <div style={{width:"80px",height:"1px",background:C.gray200,marginBottom:"8px"}}/>
+              )}
+              <div style={{fontSize:"14px",color:C.gray500,fontWeight:500}}>{inv.founderLabel || "Signatory"}</div>
+            </div>
+            <div style={{ textAlign: "right", minWidth: "220px" }}>
+              <div style={{ ...LS, marginBottom: "6px" }}>Total Due</div>
+              <div className="money-inline" style={{display:"inline-flex",alignItems:"baseline",justifyContent:"flex-end",gap:"4px"}}>
+                <span style={{fontSize:"16px",fontWeight:700,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
+                <div style={{fontSize:"30px",fontWeight:700,color:C.gray900,letterSpacing:"-0.8px",lineHeight:1,textAlign:"right"}}>
+                  {override ? fmtInputNum(inv.total) : (grand > 0 ? fmtNum(grand) : "0.00")}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       {pages.map((rows, pi) => (
         <div key={pi} id={`invoice-page-${pi + 1}`} className="iv-page"
@@ -1671,7 +1763,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
           )}
 
           {/* Table header */}
-          <div ref={pi===0 ? tableHeaderRef : undefined} style={{display:"grid",gridTemplateColumns:colGrid,gap:"12px",
+          <div style={{display:"grid",gridTemplateColumns:colGrid,gap:"12px",
             paddingBottom:"10px",borderBottom:`1.5px solid ${C.gray300}`,marginBottom:"2px"}}>
             <div style={LS}>{inv.col1Name||"Description"}</div>
             {twoCol && <>
@@ -1698,14 +1790,14 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
 
           {/* Add row — last page only */}
           {pi===pages.length-1 && (
-            <div ref={addRowRef} data-noprint="1" style={{marginTop:"8px",marginBottom:"12px"}}>
+            <div data-noprint="1" style={{marginTop:"8px",marginBottom:"12px"}}>
               <AddRowMenu onAdd={t=>set(p=>({...p,items:[...p.items,mkItem(t)]}))}/>
             </div>
           )}
 
           {/* Footer — last page only */}
           {pi===pages.length-1 && (
-            <div ref={footerRef} style={{marginTop:"auto",paddingTop:"28px"}}>
+            <div style={{marginTop:"auto",paddingTop:"28px"}}>
               {(inv.taxRate||inv.discountRate) && (
                 <div style={{marginBottom:"16px",paddingBottom:"16px",borderBottom:`1px solid ${C.gray100}`}}>
                   {inv.discountRate && <div style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:"12px",color:C.gray600}}><span>Discount ({inv.discountRate}%)</span><span>−{sym} {fmtNum(disc)}</span></div>}
@@ -2130,7 +2222,7 @@ export default function App() {
           .invoice-scale-wrapper { transform: none !important; width: 100% !important; }
           .invoice-canvas-outer { padding: 12px 8px !important; }
           .workspace-shell { grid-template-columns: 1fr !important; }
-          .page-pane { order: -1; max-height: none !important; overflow-x: auto !important; overflow-y: hidden !important; }
+          .page-pane { order: -1; height: auto !important; max-height: none !important; overflow-x: auto !important; overflow-y: hidden !important; }
           .page-pane-track { display: flex !important; flex-direction: row !important; }
           .page-thumb { min-width: 148px !important; }
         }
@@ -2301,7 +2393,7 @@ export default function App() {
             padding: "36px 24px 48px",
             display: "flex",
             justifyContent: "center",
-            overflowX: "auto"
+            overflow: "visible"
           }}
         >
           <div
@@ -2322,13 +2414,15 @@ export default function App() {
                 className="page-pane"
                 style={{
                   position: "sticky",
-                  top: "94px",
-                  maxHeight: "calc(100vh - 132px)",
+                  top: "88px",
+                  alignSelf: "start",
+                  height: "calc(100vh - 112px)",
                   overflowY: "auto",
                   border: `1px solid ${UI.border}`,
                   background: dark ? UI.panel : UI.card,
                   boxShadow: dark ? "0 16px 40px rgba(0,0,0,0.24)" : "0 10px 28px rgba(15,23,42,0.08)",
-                  padding: "12px"
+                  padding: "12px",
+                  marginBottom: "8px"
                 }}
               >
                 <div style={{ padding: "4px 4px 10px" }}>
