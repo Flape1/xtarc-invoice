@@ -193,15 +193,15 @@ function Editable({ value, onChange, placeholder, style, multiline, onEnter, onT
       style={{
         cursor:"text", minWidth:"30px", minHeight:"1.2em",
         borderRadius:"6px",
-        border:`1px solid ${C.gray200}`,
-        background:C.white,
+        border:"1px solid transparent",
+        background:"transparent",
         transition:"border-color 0.15s, background 0.15s, box-shadow 0.15s",
         padding:"6px 8px",
-        boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3)",
+        boxShadow:"none",
         ...style,
       }}
-      onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.gray300; e.currentTarget.style.background="#fcfcfd"; e.currentTarget.style.boxShadow="inset 0 1px 0 rgba(255,255,255,0.3)"; }}
-      onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.gray200; e.currentTarget.style.background=C.white; e.currentTarget.style.boxShadow="inset 0 1px 0 rgba(255,255,255,0.3)"; }}>
+      onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.gray300; e.currentTarget.style.background="#fcfcfd"; e.currentTarget.style.boxShadow="0 0 0 1px rgba(209,213,219,0.28)"; }}
+      onMouseLeave={e=>{ e.currentTarget.style.borderColor="transparent"; e.currentTarget.style.background="transparent"; e.currentTarget.style.boxShadow="none"; }}>
       {local || <span className="edit-placeholder" style={{opacity:0.35,fontWeight:400,fontStyle:"normal",color:C.gray400}}>{placeholder}</span>}
     </div>
   );
