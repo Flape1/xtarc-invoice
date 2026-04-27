@@ -1201,28 +1201,25 @@ function estimateRowUnits(item, twoCol) {
   return units;
 }
 
-function paginate(items, { twoCol }) {
-  if (!items.length) return [[]];
+function paginateForward(items, twoCol, firstLimit, nextLimit) {
+  if (!items.length) return [];
   const pages = [];
   let i = 0;
 
   while (i < items.length) {
-    const remaining = items.length - i;
-    const isFirstPage = pages.length === 0;
-    const maxUnitsBase = isFirstPage ? FIRST_PAGE_ROW_UNITS : NEXT_PAGE_ROW_UNITS;
-    const maxUnits = remaining <= 6 ? maxUnitsBase - LAST_PAGE_FOOTER_RESERVE : maxUnitsBase;
     const page = [];
+    const limit = pages.length === 0 ? firstLimit : nextLimit;
     let used = 0;
 
     while (i < items.length) {
       const item = items[i];
       const next = items[i + 1];
       const itemUnits = estimateRowUnits(item, twoCol);
-      const headerBundleUnits =
+      const bundleUnits =
         item.type === "header" && next ? itemUnits + estimateRowUnits(next, twoCol) : itemUnits;
 
-      if (page.length > 0 && used + headerBundleUnits > maxUnits && item.type === "header") break;
-      if (page.length > 0 && used + itemUnits > maxUnits) break;
+      if (page.length > 0 && item.type === "header" && used + bundleUnits > limit) break;
+      if (page.length > 0 && used + itemUnits > limit) break;
 
       page.push(item);
       used += itemUnits;
@@ -1238,6 +1235,33 @@ function paginate(items, { twoCol }) {
   }
 
   return pages;
+}
+
+function paginate(items, { twoCol }) {
+  if (!items.length) return [[]];
+
+  const lastLimit = NEXT_PAGE_ROW_UNITS - LAST_PAGE_FOOTER_RESERVE;
+  let splitIndex = items.length;
+  let used = 0;
+
+  while (splitIndex > 0) {
+    const prevIndex = splitIndex - 1;
+    const prevItem = items[prevIndex];
+    const prevUnits = estimateRowUnits(prevItem, twoCol);
+
+    if (used > 0 && prevItem.type === "header") break;
+    if (used > 0 && used + prevUnits > lastLimit) break;
+
+    used += prevUnits;
+    splitIndex = prevIndex;
+  }
+
+  const prefix = items.slice(0, splitIndex);
+  const lastPage = items.slice(splitIndex);
+  const pages = paginateForward(prefix, twoCol, FIRST_PAGE_ROW_UNITS, NEXT_PAGE_ROW_UNITS);
+
+  if (lastPage.length) pages.push(lastPage);
+  return pages.length ? pages : [[]];
 }
 
 /* ─── INVOICE CANVAS ────────────────────────────────────────────────────── */
