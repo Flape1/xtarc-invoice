@@ -538,9 +538,9 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
 
         {/* Two-col: unit cost + qty */}
         {twoCol && <>
-          <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"4px"}}>
+          <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"2px"}}>
             {String(item.rate || "").trim() !== "" && (
-              <span style={{fontSize:"11px",color:C.gray400,whiteSpace:"nowrap"}}>{sym}</span>
+              <span style={{fontSize:"11px",fontWeight:700,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
             )}
             <Editable
               value={fmtInputNum(item.rate)}
@@ -562,9 +562,9 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
         <div style={{ textAlign: "right" }}>
           {item.type === "included" ? (
             <div>
-              <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"4px"}}>
+              <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"2px"}}>
                 {String(item.price || "").trim() !== "" && (
-                  <span style={{fontSize:"11px",color:C.gray400,whiteSpace:"nowrap"}}>{sym}</span>
+                  <span style={{fontSize:"11px",fontWeight:700,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
                 )}
                 <Editable
                   value={String(item.price || "").trim() !== "" ? fmtInputNum(item.price) : (item.includedLabel || "Included")}
@@ -617,8 +617,8 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
 
                 return (
                   <>
-                    <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"4px"}}>
-                      <span style={{fontSize:"11px",color:C.gray400,whiteSpace:"nowrap"}}>{sym}</span>
+                    <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"2px"}}>
+                      <span style={{fontSize:"11px",fontWeight:700,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
                       <Editable
                         value={shownValue}
                         onChange={v => onUpd(item.id, "price", cleanNumericInput(v))}
@@ -1661,8 +1661,8 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
                 </div>
                 <div style={{ textAlign: "right", minWidth: "220px" }}>
                   <div style={{ ...LS, marginBottom: "6px" }}>Total Due</div>
-                  <div style={{display:"inline-flex",alignItems:"baseline",justifyContent:"flex-end",gap:"8px"}}>
-                    <span style={{fontSize:"16px",fontWeight:600,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
+                  <div style={{display:"inline-flex",alignItems:"baseline",justifyContent:"flex-end",gap:"4px"}}>
+                    <span style={{fontSize:"16px",fontWeight:700,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
                     <Editable
                       value={override ? fmtInputNum(inv.total) : (grand > 0 ? fmtNum(grand) : "")}
                       onChange={v => set(p => ({ ...p, total: cleanNumericInput(v) }))}
