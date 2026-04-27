@@ -14,14 +14,20 @@ const BASE_CURRENCIES = [
   {code:"CAD",sym:"CA$"},{code:"AUD",sym:"A$"},
 ];
 
-const FIRST_PAGE_ROW_UNITS = 10.4;
-const NEXT_PAGE_ROW_UNITS = 17.2;
-const LAST_PAGE_FOOTER_RESERVE = 5.2;
+const FIRST_PAGE_ROW_UNITS = 11.6;
+const NEXT_PAGE_ROW_UNITS = 18.4;
+const LAST_PAGE_FOOTER_RESERVE = 4.4;
 const uid = () => Math.random().toString(36).slice(2,8);
 const mkItem = (type="item") => ({
   id:uid(), type, name:"", note:"", hours:"", rate:"", price:"",
   bold:false, italic:false, includedLabel:"Included",
 });
+const ROW_TYPES = [
+  {t:"item",      l:"Line Item", d:"Price or qty x rate"},
+  {t:"header",    l:"Section",   d:"Group heading"},
+  {t:"included",  l:"Included",  d:"No-charge item"},
+  {t:"deduction", l:"Deduction", d:"Subtract from total"},
+];
 
 /* ─── HELPERS ───────────────────────────────────────────────────────────── */
 function parseNum(v) {
@@ -375,6 +381,8 @@ function FooterBlockEditor({
 /* ─── INVOICE ROW ───────────────────────────────────────────────────────── */
 function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onInsert }) {
   const [hov, setHov] = useState(false);
+  const [insertOpen, setInsertOpen] = useState(false);
+  const hideRef = useRef(null);
   const twoCol  = inv.columnMode === "2";
   const colGrid = twoCol ? "1fr 90px 70px 110px" : "1fr 130px";
   const price   = computePrice(item);
@@ -394,10 +402,27 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
     lineHeight: 1.4,
   };
 
+  const showControls = () => {
+    if (hideRef.current) clearTimeout(hideRef.current);
+    setHov(true);
+  };
+
+  const hideControls = () => {
+    if (hideRef.current) clearTimeout(hideRef.current);
+    hideRef.current = setTimeout(() => {
+      setHov(false);
+      setInsertOpen(false);
+    }, 140);
+  };
+
+  useEffect(() => () => {
+    if (hideRef.current) clearTimeout(hideRef.current);
+  }, []);
+
   return (
     <div
-      onMouseEnter={()=>setHov(true)}
-      onMouseLeave={()=>setHov(false)}
+      onMouseEnter={showControls}
+      onMouseLeave={hideControls}
       style={{position:"relative", borderBottom:`1px solid ${C.gray100}`,
         background:hov?"#f8faff":"transparent", transition:"background 0.1s",
         overflow:"visible",
@@ -415,7 +440,8 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
             zIndex: 50,
             pointerEvents: "all"
           }}
-          onMouseEnter={() => setHov(true)}
+          onMouseEnter={showControls}
+          onMouseLeave={hideControls}
         >
           <RowToolbar
             item={item}
@@ -606,13 +632,56 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
 
       {/* Insert-after + button — hidden in PDF */}
       {hov && (
-        <div data-noprint="1" style={{position:"absolute",bottom:"-10px",left:"50%",transform:"translateX(-50%)",zIndex:40}}
-          onMouseEnter={()=>setHov(true)}>
-          <button onClick={()=>onInsert(item.id)}
+        <div
+          data-noprint="1"
+          style={{position:"absolute",bottom:"-10px",left:"50%",transform:"translateX(-50%)",zIndex:40}}
+          onMouseEnter={showControls}
+          onMouseLeave={hideControls}
+        >
+          <button onClick={()=>setInsertOpen(o=>!o)}
             style={{width:"20px",height:"20px",borderRadius:"50%",border:`1.5px solid ${C.accent}`,
               background:C.white,color:C.accent,fontSize:"13px",lineHeight:1,cursor:"pointer",
               display:"flex",alignItems:"center",justifyContent:"center",padding:0,
               boxShadow:"0 1px 4px rgba(0,0,0,0.12)"}}>+</button>
+          {insertOpen && (
+            <div
+              style={{
+                position:"absolute",
+                bottom:"calc(100% + 8px)",
+                left:"50%",
+                transform:"translateX(-50%)",
+                background:C.white,
+                border:`1px solid ${C.gray200}`,
+                borderRadius:"10px",
+                boxShadow:"0 8px 24px rgba(0,0,0,0.12)",
+                overflow:"hidden",
+                minWidth:"210px"
+              }}
+            >
+              {ROW_TYPES.map(({t,l,d}) => (
+                <button
+                  key={t}
+                  onClick={() => { onInsert(item.id, t); setInsertOpen(false); }}
+                  style={{
+                    display:"block",
+                    width:"100%",
+                    padding:"10px 14px",
+                    background:"none",
+                    border:"none",
+                    textAlign:"left",
+                    cursor:"pointer",
+                    fontFamily:"inherit",
+                    borderBottom:`1px solid ${C.gray100}`
+                  }}
+                  onMouseEnter={e=>e.currentTarget.style.background=C.gray50}
+                  onMouseLeave={e=>e.currentTarget.style.background="none"}
+                >
+                  <div style={{fontSize:"13px",fontWeight:500,color:C.gray900}}>{l}</div>
+                  <div style={{fontSize:"11px",color:C.gray400,marginTop:"1px"}}>{d}</div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -630,13 +699,6 @@ function AddRowMenu({ onAdd }) {
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
-  const types = [
-    {t:"item",      l:"Line Item",      d:"Price or qty × rate"},
-    {t:"header",    l:"Section",        d:"Group heading"},
-    {t:"included",  l:"Included",       d:"No-charge item"},
-    {t:"deduction", l:"Deduction",      d:"Subtract from total"},
-  ];
-
   return (
     <div ref={ref} style={{position:"relative",display:"inline-block"}}>
       <button onClick={()=>setOpen(o=>!o)}
@@ -650,7 +712,7 @@ function AddRowMenu({ onAdd }) {
         <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:C.white,
           border:`1px solid ${C.gray200}`,borderRadius:"10px",
           boxShadow:"0 8px 24px rgba(0,0,0,0.1)",zIndex:100,overflow:"hidden",minWidth:"200px"}}>
-          {types.map(({t,l,d}) => (
+          {ROW_TYPES.map(({t,l,d}) => (
             <button key={t} onClick={()=>{onAdd(t);setOpen(false);}}
               style={{display:"block",width:"100%",padding:"10px 16px",background:"none",
                 border:"none",textAlign:"left",cursor:"pointer",fontFamily:"inherit",
@@ -1191,12 +1253,12 @@ function TemplatesModal({ inv, onLoad, onClose, ui }) {
 /* ─── PAGINATE ──────────────────────────────────────────────────────────── */
 function estimateRowUnits(item, twoCol) {
   if (!item) return 0;
-  if (item.type === "header") return 1.55;
-  if (item.type === "included") return 0.9;
+  if (item.type === "header") return 1.35;
+  if (item.type === "included") return 0.72;
 
-  let units = 1.28;
-  if (String(item.note || "").trim()) units += 0.38;
-  if (!twoCol) units += 0.36;
+  let units = 1.04;
+  if (String(item.note || "").trim()) units += 0.28;
+  if (!twoCol) units += 0.22;
   if (item.type === "deduction") units += 0.08;
   return units;
 }
@@ -1277,7 +1339,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
   const delItem = id => set(p=>({...p,items:p.items.filter(it=>it.id!==id)}));
   const dupItem = id => set(p=>{const i=p.items.findIndex(x=>x.id===id);if(i<0)return p;return{...p,items:[...p.items.slice(0,i+1),{...p.items[i],id:uid()},...p.items.slice(i+1)]};});
   const mvItem  = (id,d) => set(p=>{const a=[...p.items],i=a.findIndex(x=>x.id===id),j=i+d;if(j<0||j>=a.length)return p;[a[i],a[j]]=[a[j],a[i]];return{...p,items:a};});
-  const insertAfter = id => set(p=>{const i=p.items.findIndex(x=>x.id===id);return{...p,items:[...p.items.slice(0,i+1),mkItem("item"),...p.items.slice(i+1)]};});
+  const insertAfter = (id, type="item") => set(p=>{const i=p.items.findIndex(x=>x.id===id);return{...p,items:[...p.items.slice(0,i+1),mkItem(type),...p.items.slice(i+1)]};});
   const onDrop  = (e,tid) => {
     const sid = e.dataTransfer.getData("rowId");
     if (!sid || sid===tid) return;
@@ -1998,6 +2060,8 @@ export default function App() {
     </>
   );
 }
+
+
 
 
 
