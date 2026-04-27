@@ -538,7 +538,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
 
         {/* Two-col: unit cost + qty */}
         {twoCol && <>
-          <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"2px"}}>
+          <div className="money-inline" style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"2px"}}>
             {String(item.rate || "").trim() !== "" && (
               <span style={{fontSize:"11px",fontWeight:700,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
             )}
@@ -562,7 +562,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
         <div style={{ textAlign: "right" }}>
           {item.type === "included" ? (
             <div>
-              <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"2px"}}>
+              <div className="money-inline" style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"2px"}}>
                 {String(item.price || "").trim() !== "" && (
                   <span style={{fontSize:"11px",fontWeight:700,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
                 )}
@@ -617,7 +617,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
 
                 return (
                   <>
-                    <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"2px"}}>
+                    <div className="money-inline" style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"2px"}}>
                       <span style={{fontSize:"11px",fontWeight:700,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
                       <Editable
                         value={shownValue}
@@ -1661,7 +1661,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
                 </div>
                 <div style={{ textAlign: "right", minWidth: "220px" }}>
                   <div style={{ ...LS, marginBottom: "6px" }}>Total Due</div>
-                  <div style={{display:"inline-flex",alignItems:"baseline",justifyContent:"flex-end",gap:"4px"}}>
+                  <div className="money-inline" style={{display:"inline-flex",alignItems:"baseline",justifyContent:"flex-end",gap:"4px"}}>
                     <span style={{fontSize:"16px",fontWeight:700,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
                     <Editable
                       value={override ? fmtInputNum(inv.total) : (grand > 0 ? fmtNum(grand) : "")}
@@ -1924,6 +1924,12 @@ export default function App() {
     n.style.minHeight = "0";
   });
 
+  doc.querySelectorAll(".money-inline .editable-field").forEach(n => {
+    n.style.minWidth = "0";
+    n.style.width = "auto";
+    n.style.display = "inline-block";
+  });
+
   doc.querySelectorAll("input, textarea").forEach(n => {
     n.style.display = "none";
     n.style.border = "none";
@@ -1940,6 +1946,8 @@ export default function App() {
     "input, textarea { display: none !important; }",
     ".iv-page { transform: none !important; }",
     ".editable-field { border: none !important; outline: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; border-radius: 0 !important; min-height: 0 !important; }",
+    ".money-inline { gap: 2px !important; }",
+    ".money-inline .editable-field { min-width: 0 !important; width: auto !important; display: inline-block !important; }",
   ].join(" ");
   doc.head.appendChild(s);
 }
