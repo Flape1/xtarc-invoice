@@ -131,7 +131,7 @@ function useUndoable(init) {
 }
 
 /* ─── INLINE EDITABLE ───────────────────────────────────────────────────── */
-function Editable({ value, onChange, placeholder, style, multiline, onEnter, onTab }) {
+function Editable({ value, onChange, placeholder, style, multiline, onEnter, onTab, plain=false }) {
   const [editing, setEditing] = useState(false);
   const [local,   setLocal]   = useState(value);
   const ref = useRef(null);
@@ -193,15 +193,15 @@ function Editable({ value, onChange, placeholder, style, multiline, onEnter, onT
       style={{
         cursor:"text", minWidth:"30px", minHeight:"1.2em",
         borderRadius:"6px",
-        border:"1px solid transparent",
+        border:plain ? "1px solid transparent" : "1px solid transparent",
         background:"transparent",
         transition:"border-color 0.15s, background 0.15s, box-shadow 0.15s",
-        padding:"6px 8px",
+        padding:plain ? "0" : "6px 8px",
         boxShadow:"none",
         ...style,
       }}
-      onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.gray300; e.currentTarget.style.background="#fcfcfd"; e.currentTarget.style.boxShadow="0 0 0 1px rgba(209,213,219,0.28)"; }}
-      onMouseLeave={e=>{ e.currentTarget.style.borderColor="transparent"; e.currentTarget.style.background="transparent"; e.currentTarget.style.boxShadow="none"; }}>
+      onMouseEnter={plain ? undefined : e=>{ e.currentTarget.style.borderColor=C.gray300; e.currentTarget.style.background="#fcfcfd"; e.currentTarget.style.boxShadow="0 0 0 1px rgba(209,213,219,0.28)"; }}
+      onMouseLeave={plain ? undefined : e=>{ e.currentTarget.style.borderColor="transparent"; e.currentTarget.style.background="transparent"; e.currentTarget.style.boxShadow="none"; }}>
       {local || <span className="edit-placeholder" style={{opacity:0.35,fontWeight:400,fontStyle:"normal",color:C.gray400}}>{placeholder}</span>}
     </div>
   );
@@ -484,7 +484,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
             opacity:hov?1:0,transition:"opacity 0.15s",userSelect:"none"}}
             draggable onDragStart={e=>e.dataTransfer.setData("rowId",item.id)}>⠿</span>
           <div style={{flex:1,minWidth:0}}>
-                        <Editable value={item.name} onChange={v=>onUpd(item.id,"name",v)}
+                        <Editable value={item.name} onChange={v=>onUpd(item.id,"name",v)} plain={measureOnly}
               placeholder={item.type==="header"?"Section name…":item.type==="included"?"Included item…":item.type==="deduction"?"Deduction…":"Item description…"}
               style={ns}/>
             {/* Note — editable for non-included */}
@@ -492,6 +492,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
               <Editable
                 value={item.note || ""}
                 onChange={v => onUpd(item.id, "note", v)}
+                plain={measureOnly}
                 placeholder="Add note..."
                 style={{
                   fontSize: "12.5px",
@@ -520,6 +521,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
     <Editable
       value={item.hours || ""}
       onChange={v => onUpd(item.id, "hours", cleanNumericInput(v))}
+      plain={measureOnly}
       placeholder="Qty"
       style={{ fontSize: "12.5px", color: C.gray700, minWidth: "28px", maxWidth: "54px" }}
     />
@@ -527,6 +529,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
     <Editable
       value={fmtInputNum(item.rate)}
       onChange={v => onUpd(item.id, "rate", cleanNumericInput(v))}
+      plain={measureOnly}
       placeholder="Rate"
       style={{ fontSize: "12.5px", color: C.gray700, minWidth: "42px", maxWidth: "84px" }}
     />
@@ -550,6 +553,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
             <Editable
               value={fmtInputNum(item.rate)}
               onChange={v => onUpd(item.id, "rate", cleanNumericInput(v))}
+              plain={measureOnly}
               placeholder="—"
               style={{ fontSize: "14.5px", color: C.gray600, textAlign: "right", minWidth:"76px" }}
             />
@@ -557,6 +561,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
           <Editable
             value={item.hours || ""}
             onChange={v => onUpd(item.id, "hours", cleanNumericInput(v))}
+            plain={measureOnly}
             placeholder="—"
             style={{ fontSize: "14.5px", color: C.gray600, textAlign: "center" }}
           />
@@ -588,6 +593,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
                     onUpd(item.id, "price", "");
                     onUpd(item.id, "includedLabel", v);
                   }}
+                  plain={measureOnly}
                   placeholder="Included"
                   style={{
                     fontSize: "13.5px",
@@ -627,6 +633,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
                       <Editable
                         value={shownValue}
                         onChange={v => onUpd(item.id, "price", cleanNumericInput(v))}
+                        plain={measureOnly}
                         placeholder="0.00"
                         style={{
                           fontSize: "13px",
@@ -2301,15 +2308,15 @@ export default function App() {
             className="workspace-shell"
             style={{
               width: "100%",
-              maxWidth: showPages && pageMeta.length > 1 ? "1460px" : "1280px",
+              maxWidth: showPages ? "1460px" : "1280px",
               margin: "0 auto",
               display: "grid",
-              gridTemplateColumns: showPages && pageMeta.length > 1 ? "220px minmax(0, 1fr)" : "minmax(0, 1fr)",
+              gridTemplateColumns: showPages ? "220px minmax(0, 1fr)" : "minmax(0, 1fr)",
               gap: "18px",
               alignItems: "start"
             }}
           >
-            {showPages && pageMeta.length > 1 && (
+            {showPages && (
               <aside
                 data-noprint="1"
                 className="page-pane"
@@ -2334,6 +2341,19 @@ export default function App() {
                 </div>
 
                 <div className="page-pane-track" style={{ display: "grid", gap: "12px" }}>
+                  {pageMeta.length === 0 && (
+                    <div
+                      style={{
+                        border: `1px dashed ${UI.border}`,
+                        padding: "14px",
+                        fontSize: "12px",
+                        color: UI.muted,
+                        background: dark ? "rgba(255,255,255,0.02)" : "#f8fafb"
+                      }}
+                    >
+                      Building page thumbnails...
+                    </div>
+                  )}
                   {pageMeta.map(page => {
                     const active = currentPage === page.number;
                     return (
