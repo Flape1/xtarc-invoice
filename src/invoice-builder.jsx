@@ -68,7 +68,6 @@ function cleanNumericInput(v) {
 
 function calcGrandTotal(inv) {
   const sub = inv.items.reduce((acc, item) => {
-    if (item.type === "included") return acc;
     const p = parseNum(computePrice(item));
     if (p === null) return acc;
     return item.type === "deduction" ? acc - p : acc + p;
@@ -525,12 +524,44 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
         {/* Amount column */}
         <div style={{ textAlign: "right" }}>
           {item.type === "included" ? (
-            <Editable
-              value={item.includedLabel || "Included"}
-              onChange={v => onUpd(item.id, "includedLabel", v)}
-              placeholder="Included"
-              style={{ fontSize: "12px", color: C.gray400, fontWeight: 500, textAlign: "right", display: "inline-block" }}
-            />
+            <div>
+              <Editable
+                value={String(item.price || "").trim() !== "" ? fmtInputNum(item.price) : (item.includedLabel || "Included")}
+                onChange={v => {
+                  const trimmed = String(v || "").trim();
+                  const numeric = cleanNumericInput(v);
+                  if (trimmed === "") {
+                    onUpd(item.id, "price", "");
+                    onUpd(item.id, "includedLabel", "Included");
+                    return;
+                  }
+                  if (numeric && parseNum(numeric) !== null) {
+                    onUpd(item.id, "price", numeric);
+                    return;
+                  }
+                  onUpd(item.id, "price", "");
+                  onUpd(item.id, "includedLabel", v);
+                }}
+                placeholder="Included"
+                style={{
+                  fontSize: "12px",
+                  color: String(item.price || "").trim() !== "" ? C.gray700 : C.gray400,
+                  fontWeight: 500,
+                  textAlign: "right",
+                  display: "inline-block"
+                }}
+              />
+              <div
+                data-noprint="1"
+                style={{
+                  fontSize: "10px",
+                  marginTop: "2px",
+                  color: String(item.price || "").trim() !== "" ? "#059669" : C.gray400
+                }}
+              >
+                {String(item.price || "").trim() !== "" ? "included in total" : "not added to total"}
+              </div>
+            </div>
           ) : (
             <div>
               {(() => {
