@@ -14,8 +14,9 @@ const BASE_CURRENCIES = [
   {code:"CAD",sym:"CA$"},{code:"AUD",sym:"A$"},
 ];
 
-const ITEMS_PER_PAGE = 7;
-const LAST_PAGE_ROW_COUNT = 4;
+const FIRST_PAGE_ROW_UNITS = 10.4;
+const NEXT_PAGE_ROW_UNITS = 17.2;
+const LAST_PAGE_FOOTER_RESERVE = 5.2;
 const uid = () => Math.random().toString(36).slice(2,8);
 const mkItem = (type="item") => ({
   id:uid(), type, name:"", note:"", hours:"", rate:"", price:"",
@@ -386,7 +387,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
         : { top: prevItem?.type === "header" ? 6 : 4, bottom: 6 };
 
   const ns = {
-    fontSize:   item.type==="header" ? "15px" : "14px",
+    fontSize:   item.type==="header" ? "16px" : "14.5px",
     fontWeight: item.bold ? 700 : (item.type==="header" ? 600 : 400),
     fontStyle:  item.italic ? "italic" : "normal",
     color:      item.type==="included" ? C.gray500 : item.type==="deduction" ? C.gray600 : C.gray900,
@@ -457,7 +458,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
                 onChange={v => onUpd(item.id, "note", v)}
                 placeholder="Add note..."
                 style={{
-                  fontSize: "12px",
+                  fontSize: "12.5px",
                   color: C.gray400,
                   lineHeight: 1.4,
                   marginTop: "3px",
@@ -484,17 +485,17 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
       value={item.hours || ""}
       onChange={v => onUpd(item.id, "hours", cleanNumericInput(v))}
       placeholder="Qty"
-      style={{ fontSize: "12px", color: C.gray700, minWidth: "28px", maxWidth: "54px" }}
+      style={{ fontSize: "12.5px", color: C.gray700, minWidth: "28px", maxWidth: "54px" }}
     />
     <span style={{ fontSize: "11px", color: C.gray400, userSelect: "none" }}>×</span>
     <Editable
       value={fmtInputNum(item.rate)}
       onChange={v => onUpd(item.id, "rate", cleanNumericInput(v))}
       placeholder="Rate"
-      style={{ fontSize: "12px", color: C.gray700, minWidth: "42px", maxWidth: "84px" }}
+      style={{ fontSize: "12.5px", color: C.gray700, minWidth: "42px", maxWidth: "84px" }}
     />
     {parseNum(item.hours) !== null && parseNum(item.rate) !== null && (
-      <span style={{ fontSize: "12px", color: "#059669", fontWeight: 600, marginLeft: "3px", userSelect: "none" }}>
+      <span style={{ fontSize: "12.5px", color: "#059669", fontWeight: 600, marginLeft: "3px", userSelect: "none" }}>
         = {sym} {fmtNum((parseNum(item.hours) || 0) * (parseNum(item.rate) || 0))}
       </span>
     )}
@@ -510,13 +511,13 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
             value={fmtInputNum(item.rate)}
             onChange={v => onUpd(item.id, "rate", cleanNumericInput(v))}
             placeholder="—"
-            style={{ fontSize: "14px", color: C.gray600, textAlign: "right" }}
+            style={{ fontSize: "14.5px", color: C.gray600, textAlign: "right" }}
           />
           <Editable
             value={item.hours || ""}
             onChange={v => onUpd(item.id, "hours", cleanNumericInput(v))}
             placeholder="—"
-            style={{ fontSize: "14px", color: C.gray600, textAlign: "center" }}
+            style={{ fontSize: "14.5px", color: C.gray600, textAlign: "center" }}
           />
         </>}
 
@@ -544,7 +545,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
                 }}
                 placeholder="Included"
                 style={{
-                  fontSize: "12px",
+                  fontSize: "13.5px",
                   color: String(item.price || "").trim() !== "" ? C.gray700 : C.gray400,
                   fontWeight: item.bold ? 700 : 500,
                   textAlign: "right",
@@ -554,7 +555,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
               <div
                 data-noprint="1"
                 style={{
-                  fontSize: "10px",
+                  fontSize: "11px",
                   marginTop: "2px",
                   color: String(item.price || "").trim() !== "" ? "#059669" : C.gray400
                 }}
@@ -1188,28 +1189,52 @@ function TemplatesModal({ inv, onLoad, onClose, ui }) {
 
 
 /* ─── PAGINATE ──────────────────────────────────────────────────────────── */
-function paginate(items, n, lastN = LAST_PAGE_ROW_COUNT) {
+function estimateRowUnits(item, twoCol) {
+  if (!item) return 0;
+  if (item.type === "header") return 1.55;
+  if (item.type === "included") return 0.9;
+
+  let units = 1.28;
+  if (String(item.note || "").trim()) units += 0.38;
+  if (!twoCol) units += 0.36;
+  if (item.type === "deduction") units += 0.08;
+  return units;
+}
+
+function paginate(items, { twoCol }) {
   if (!items.length) return [[]];
   const pages = [];
   let i = 0;
 
   while (i < items.length) {
     const remaining = items.length - i;
+    const isFirstPage = pages.length === 0;
+    const maxUnitsBase = isFirstPage ? FIRST_PAGE_ROW_UNITS : NEXT_PAGE_ROW_UNITS;
+    const maxUnits = remaining <= 6 ? maxUnitsBase - LAST_PAGE_FOOTER_RESERVE : maxUnitsBase;
+    const page = [];
+    let used = 0;
 
-    if (remaining <= n) {
-      if (pages.length > 0 && remaining > lastN) {
-        const split = remaining - lastN;
-        pages.push(items.slice(i, i + split));
-        i += split;
-        continue;
-      }
-      pages.push(items.slice(i));
-      break;
+    while (i < items.length) {
+      const item = items[i];
+      const next = items[i + 1];
+      const itemUnits = estimateRowUnits(item, twoCol);
+      const headerBundleUnits =
+        item.type === "header" && next ? itemUnits + estimateRowUnits(next, twoCol) : itemUnits;
+
+      if (page.length > 0 && used + headerBundleUnits > maxUnits && item.type === "header") break;
+      if (page.length > 0 && used + itemUnits > maxUnits) break;
+
+      page.push(item);
+      used += itemUnits;
+      i += 1;
     }
 
-    const pageSize = Math.min(n, Math.max(1, remaining - lastN));
-    pages.push(items.slice(i, i + pageSize));
-    i += pageSize;
+    if (!page.length) {
+      page.push(items[i]);
+      i += 1;
+    }
+
+    pages.push(page);
   }
 
   return pages;
@@ -1221,7 +1246,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
   const sym     = cur ? cur.sym : inv.currency;
   const twoCol  = inv.columnMode === "2";
   const colGrid = twoCol ? "1fr 90px 70px 110px" : "1fr 130px";
-  const pages   = paginate(inv.items, ITEMS_PER_PAGE);
+  const pages   = paginate(inv.items, { twoCol });
   const { grand, sub, tax, disc, override } = calcGrandTotal(inv);
 
   const updItem = (id,k,v) => set(p=>({...p,items:p.items.map(it=>it.id===id?{...it,[k]:v}:it)}));
@@ -1304,7 +1329,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
                 <div>
                   <div style={{...LS,marginBottom:"3px"}}>Due Date</div>
                   <Editable value={inv.dueDate||""} onChange={v=>set(p=>({...p,dueDate:v}))}
-                    placeholder="—" style={{fontSize:"13px",color:C.gray700}}/>
+                    placeholder="—" style={{fontSize:"14px",color:C.gray700}}/>
                 </div>
               </div>
             </div>
@@ -1314,8 +1339,8 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
           {pi>0 && (
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               marginBottom:"32px",paddingBottom:"16px",borderBottom:`1px solid ${C.gray200}`}}>
-              <span style={{fontSize:"13px",color:C.gray500,fontWeight:500}}>{inv.agencyName} · {inv.clientName}</span>
-              <span style={{fontSize:"12px",color:C.gray400}}>Page {pi+1} of {pages.length}</span>
+              <span style={{fontSize:"14px",color:C.gray500,fontWeight:500}}>{inv.agencyName} · {inv.clientName}</span>
+              <span style={{fontSize:"13px",color:C.gray400}}>Page {pi+1} of {pages.length}</span>
             </div>
           )}
 
@@ -1388,7 +1413,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
                     <div style={{width:"80px",height:"1px",background:C.gray200,marginBottom:"8px"}}/>
                   )}
                   <Editable value={inv.founderLabel} onChange={v=>set(p=>({...p,founderLabel:v}))}
-                    placeholder="Signatory" style={{fontSize:"12px",color:C.gray500,fontWeight:500}}/>
+                    placeholder="Signatory" style={{fontSize:"14px",color:C.gray500,fontWeight:500}}/>
                 </div>
                 <div style={{ textAlign: "right", minWidth: "220px" }}>
                   <div style={{ ...LS, marginBottom: "6px" }}>Total Due</div>
@@ -1397,7 +1422,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
                     onChange={v => set(p => ({ ...p, total: cleanNumericInput(v) }))}
                     placeholder="0.00"
                     style={{
-                      fontSize: "28px",
+                      fontSize: "30px",
                       fontWeight: 700,
                       color: C.gray900,
                       letterSpacing: "-0.8px",
@@ -1949,6 +1974,8 @@ export default function App() {
     </>
   );
 }
+
+
 
 
 
