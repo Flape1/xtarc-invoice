@@ -135,24 +135,40 @@ function Editable({ value, onChange, placeholder, style, multiline, onEnter, onT
     if (e.key==="Tab")               { e.preventDefault(); commit(); onTab&&onTab(); }
   };
 
+  const focusField = el => {
+    if (!el) return;
+    el.style.borderColor = C.accent;
+    el.style.background = C.white;
+    el.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.14)";
+  };
+
+  const blurField = el => {
+    if (!el) return;
+    el.style.borderColor = C.gray300;
+    el.style.background = C.white;
+    el.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.3)";
+  };
+
   const base = {
     background:C.white, border:`1px solid ${C.gray300}`, outline:"none",
     width:"100%", fontFamily:"inherit", padding:"6px 8px", margin:0,
     fontSize:"inherit", color:"inherit", fontWeight:"inherit",
     fontStyle:"inherit", resize:"none", lineHeight:"inherit",
     letterSpacing:"inherit", borderRadius:"6px",
-    boxShadow:"inset 0 1px 0 rgba(255,255,255,0.25)", ...style,
+    boxShadow:"0 0 0 3px rgba(37,99,235,0.14)", ...style,
   };
 
   if (editing) {
     if (multiline) return (
       <textarea ref={ref} value={local} rows={2}
         style={{...base, resize:"none", overflow:"hidden"}}
-        onChange={e=>setLocal(e.target.value)} onBlur={commit} onKeyDown={handleKey}/>
+        onChange={e=>setLocal(e.target.value)} onBlur={commit} onKeyDown={handleKey}
+        onFocus={e=>focusField(e.currentTarget)} />
     );
     return (
       <input ref={ref} value={local} style={base}
-        onChange={e=>setLocal(e.target.value)} onBlur={commit} onKeyDown={handleKey}/>
+        onChange={e=>setLocal(e.target.value)} onBlur={commit} onKeyDown={handleKey}
+        onFocus={e=>focusField(e.currentTarget)} />
     );
   }
 
@@ -161,15 +177,15 @@ function Editable({ value, onChange, placeholder, style, multiline, onEnter, onT
       style={{
         cursor:"text", minWidth:"30px", minHeight:"1.2em",
         borderRadius:"6px",
-        border:`1px solid ${C.gray300}`,
+        border:`1px solid ${C.gray200}`,
         background:C.white,
         transition:"border-color 0.15s, background 0.15s, box-shadow 0.15s",
         padding:"6px 8px",
-        boxShadow:"inset 0 1px 0 rgba(255,255,255,0.25)",
+        boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3)",
         ...style,
       }}
-      onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.accent; e.currentTarget.style.background=C.accentL; e.currentTarget.style.boxShadow=`0 0 0 3px rgba(37,99,235,0.08)`; }}
-      onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.gray300; e.currentTarget.style.background=C.white; e.currentTarget.style.boxShadow="inset 0 1px 0 rgba(255,255,255,0.25)"; }}>
+      onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.gray300; e.currentTarget.style.background="#fcfcfd"; e.currentTarget.style.boxShadow="inset 0 1px 0 rgba(255,255,255,0.3)"; }}
+      onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.gray200; e.currentTarget.style.background=C.white; e.currentTarget.style.boxShadow="inset 0 1px 0 rgba(255,255,255,0.3)"; }}>
       {local || <span className="edit-placeholder" style={{opacity:0.35,fontWeight:400,fontStyle:"normal",color:C.gray400}}>{placeholder}</span>}
     </div>
   );
@@ -281,6 +297,13 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
   const twoCol  = inv.columnMode === "2";
   const colGrid = twoCol ? "1fr 90px 70px 110px" : "1fr 130px";
   const price   = computePrice(item);
+  const prevItem = idx > 0 ? inv.items[idx - 1] : null;
+  const spacing =
+    item.type === "header"
+      ? { top: idx === 0 ? 0 : 18, bottom: 10 }
+      : item.type === "included"
+        ? { top: prevItem?.type === "header" ? 4 : 2, bottom: 3 }
+        : { top: prevItem?.type === "header" ? 6 : 4, bottom: 6 };
 
   const ns = {
     fontSize:   item.type==="header" ? "14px" : "13px",
@@ -314,7 +337,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
         </div>
       )}
 
-      <div style={{display:"grid",gridTemplateColumns:colGrid,gap:"12px",alignItems:"start",padding:"11px 0"}}>
+      <div style={{display:"grid",gridTemplateColumns:colGrid,gap:"12px",alignItems:"start",padding:`${spacing.top}px 0 ${spacing.bottom}px`}}>
 
         {/* Description column */}
         <div style={{display:"flex",alignItems:"flex-start",gap:"5px",paddingLeft:item.type==="included"?"12px":0}}>
@@ -1324,7 +1347,7 @@ export default function App() {
   } : {
     bg: "#f3f5f7",
     bgAlt: "#eceff3",
-    panel: "#ffffff",
+    panel: "#eceff3",
     panelAlt: "#f8fafb",
     card: "#ffffff",
     border: "#d9dfe6",
@@ -1560,7 +1583,7 @@ export default function App() {
               />
             )}
             <div>
-              <div style={{ fontSize: "15px", fontWeight: 600, color: UI.text }}>XTARC Invoice Builder</div>
+              <div style={{ fontSize: "15px", fontWeight: 600, color: UI.text }}>Invoice Builder</div>
               <div
                 className="topbar-hint"
                 style={{
@@ -1571,7 +1594,7 @@ export default function App() {
                   textTransform: "uppercase"
                 }}
               >
-                Edit in place - export clean PDF
+                For freelancers, agencies, and client work
               </div>
             </div>
           </div>
@@ -1682,10 +1705,10 @@ export default function App() {
             style={{
               width: "100%",
               maxWidth: "1160px",
-              border: `1px solid ${UI.border}`,
-              background: UI.panel,
-              padding: "24px",
-              boxShadow: UI.stageShadow
+              border: dark ? `1px solid ${UI.border}` : "none",
+              background: dark ? UI.panel : "transparent",
+              padding: dark ? "24px" : "8px 0",
+              boxShadow: dark ? UI.stageShadow : "none"
             }}
           >
             <MobileScaler>
