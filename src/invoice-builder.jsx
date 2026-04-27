@@ -43,7 +43,10 @@ function fmtInputNum(v) {
 }
 
 function computePrice(item) {
-  if (item.type === "included") return null;
+  if (item.type === "included") {
+    const manual = parseNum(item.price);
+    return manual === null ? null : manual.toFixed(2);
+  }
 
   if (String(item.price || "").trim() !== "") {
     return cleanNumericInput(item.price);
@@ -55,6 +58,7 @@ function computePrice(item) {
 
   return "";
 }
+
 function cleanNumericInput(v) {
   const raw = String(v ?? "").replace(/,/g, "").trim();
   if (!raw) return "";
@@ -370,7 +374,6 @@ function FooterBlockEditor({
 /* ─── INVOICE ROW ───────────────────────────────────────────────────────── */
 function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onInsert }) {
   const [hov, setHov] = useState(false);
-  const TOOLBAR_ZONE = 38;
   const twoCol  = inv.columnMode === "2";
   const colGrid = twoCol ? "1fr 90px 70px 110px" : "1fr 130px";
   const price   = computePrice(item);
@@ -395,24 +398,35 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
       style={{position:"relative", borderBottom:`1px solid ${C.gray100}`,
         background:hov?"#f8faff":"transparent", transition:"background 0.1s",
         overflow:"visible",
-        paddingTop:hov ? `${TOOLBAR_ZONE}px` : 0,
-        marginTop:hov ? `-${TOOLBAR_ZONE}px` : 0,
         zIndex:hov ? 20 : 1}}>
 
       {/* Toolbar — floats above the row, centered, hidden in PDF */}
       {hov && (
-        <div data-noprint="1"
-          style={{position:"absolute",top:"4px",left:"50%",transform:"translateX(-50%)",
-            zIndex:50,pointerEvents:"all",whiteSpace:"nowrap"}}
-          onMouseEnter={()=>setHov(true)}>
-          <RowToolbar item={item} canUp={idx>0} canDown={idx<total-1}
-            onDel={()=>onDel(item.id)} onDup={()=>onDup(item.id)}
-            onMv={d=>onMv(item.id,d)}
-            onChangeType={t=>onUpd(item.id,"type",t)}
-            onBold={()=>onUpd(item.id,"bold",!item.bold)}
-            onItalic={()=>onUpd(item.id,"italic",!item.italic)}/>
+        <div
+          data-noprint="1"
+          style={{
+            position: "absolute",
+            top: "8px",
+            right: "8px",
+            zIndex: 50,
+            pointerEvents: "all"
+          }}
+          onMouseEnter={() => setHov(true)}
+        >
+          <RowToolbar
+            item={item}
+            canUp={idx > 0}
+            canDown={idx < total - 1}
+            onDel={() => onDel(item.id)}
+            onDup={() => onDup(item.id)}
+            onMv={d => onMv(item.id, d)}
+            onChangeType={t => onUpd(item.id, "type", t)}
+            onBold={() => onUpd(item.id, "bold", !item.bold)}
+            onItalic={() => onUpd(item.id, "italic", !item.italic)}
+          />
         </div>
       )}
+
 
       <div style={{display:"grid",gridTemplateColumns:colGrid,gap:"12px",alignItems:"start",padding:`${spacing.top}px 0 ${spacing.bottom}px`}}>
 
