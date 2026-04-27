@@ -324,7 +324,6 @@ function FooterBlockEditor({
   onDragStart, onDrop
 }) {
   const [hov, setHov] = useState(false);
-  const [toolbarSide, setToolbarSide] = useState("right");
   return (
     <div
       onMouseEnter={()=>setHov(true)}
@@ -375,7 +374,6 @@ function FooterBlockEditor({
 /* ─── INVOICE ROW ───────────────────────────────────────────────────────── */
 function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onInsert }) {
   const [hov, setHov] = useState(false);
-  const [toolbarSide, setToolbarSide] = useState("right");
   const twoCol  = inv.columnMode === "2";
   const colGrid = twoCol ? "1fr 90px 70px 110px" : "1fr 130px";
   const price   = computePrice(item);
@@ -399,27 +397,22 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
     <div
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>setHov(false)}
-      onMouseMove={e => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        setToolbarSide(x > rect.width * 0.58 ? "left" : "right");
-      }}
       style={{position:"relative", borderBottom:`1px solid ${C.gray100}`,
         background:hov?"#f8faff":"transparent", transition:"background 0.1s",
         overflow:"visible",
         zIndex:hov ? 20 : 1}}>
 
-      {/* Toolbar — floats above the row, centered, hidden in PDF */}
+      {/* Toolbar lives in the left gutter so it never blocks row content. */}
       {hov && (
         <div
           data-noprint="1"
           style={{
             position: "absolute",
-            top: "8px",
-            [toolbarSide === "left" ? "left" : "right"]: "8px",
+            top: "50%",
+            left: "-12px",
+            transform: "translate(-100%, -50%)",
             zIndex: 50,
-            pointerEvents: "all",
-            transition: "left 0.12s ease, right 0.12s ease"
+            pointerEvents: "all"
           }}
           onMouseEnter={() => setHov(true)}
         >
@@ -444,9 +437,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
           gap:"12px",
           alignItems:"start",
           paddingTop:`${spacing.top}px`,
-          paddingBottom:`${spacing.bottom}px`,
-          paddingLeft: hov && toolbarSide === "left" ? "168px" : "0",
-          paddingRight: hov && toolbarSide === "right" ? "168px" : "0"
+          paddingBottom:`${spacing.bottom}px`
         }}
       >
 
@@ -1907,5 +1898,6 @@ export default function App() {
     </>
   );
 }
+
 
 
