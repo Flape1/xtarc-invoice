@@ -109,17 +109,25 @@ function calcGrandTotal(inv) {
 function useUndoable(init) {
   const [stack, setStack] = useState([init]);
   const [idx,   setIdx]   = useState(0);
+  const idxRef = useRef(0);
   const state   = stack[idx];
   const canUndo = idx > 0;
   const canRedo = idx < stack.length - 1;
+
+  useEffect(() => {
+    idxRef.current = idx;
+  }, [idx]);
+
   const set = useCallback(u => {
     setStack(prev => {
-      const next = typeof u === "function" ? u(prev[idx]) : u;
-      const ns = [...prev.slice(0,idx+1), next].slice(-40);
+      const currentIdx = Math.min(idxRef.current, prev.length - 1);
+      const current = prev[currentIdx];
+      const next = typeof u === "function" ? u(current) : u;
+      const ns = [...prev.slice(0, currentIdx + 1), next].slice(-40);
       setIdx(ns.length - 1);
       return ns;
     });
-  }, [idx]);
+  }, []);
   const undo = useCallback(() => { if (canUndo) setIdx(i=>i-1); }, [canUndo]);
   const redo = useCallback(() => { if (canRedo) setIdx(i=>i+1); }, [canRedo]);
   return [state, set, undo, redo, canUndo, canRedo];
