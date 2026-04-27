@@ -324,6 +324,7 @@ function FooterBlockEditor({
   onDragStart, onDrop
 }) {
   const [hov, setHov] = useState(false);
+  const [toolbarSide, setToolbarSide] = useState("right");
   return (
     <div
       onMouseEnter={()=>setHov(true)}
@@ -374,6 +375,7 @@ function FooterBlockEditor({
 /* ─── INVOICE ROW ───────────────────────────────────────────────────────── */
 function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onInsert }) {
   const [hov, setHov] = useState(false);
+  const [toolbarSide, setToolbarSide] = useState("right");
   const twoCol  = inv.columnMode === "2";
   const colGrid = twoCol ? "1fr 90px 70px 110px" : "1fr 130px";
   const price   = computePrice(item);
@@ -394,7 +396,14 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
   };
 
   return (
-    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+    <div
+      onMouseEnter={()=>setHov(true)}
+      onMouseLeave={()=>setHov(false)}
+      onMouseMove={e => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        setToolbarSide(x > rect.width * 0.58 ? "left" : "right");
+      }}
       style={{position:"relative", borderBottom:`1px solid ${C.gray100}`,
         background:hov?"#f8faff":"transparent", transition:"background 0.1s",
         overflow:"visible",
@@ -407,9 +416,10 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
           style={{
             position: "absolute",
             top: "8px",
-            right: "8px",
+            [toolbarSide === "left" ? "left" : "right"]: "8px",
             zIndex: 50,
-            pointerEvents: "all"
+            pointerEvents: "all",
+            transition: "left 0.12s ease, right 0.12s ease"
           }}
           onMouseEnter={() => setHov(true)}
         >
@@ -427,8 +437,18 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
         </div>
       )}
 
-
-      <div style={{display:"grid",gridTemplateColumns:colGrid,gap:"12px",alignItems:"start",padding:`${spacing.top}px 0 ${spacing.bottom}px`}}>
+      <div
+        style={{
+          display:"grid",
+          gridTemplateColumns:colGrid,
+          gap:"12px",
+          alignItems:"start",
+          paddingTop:`${spacing.top}px`,
+          paddingBottom:`${spacing.bottom}px`,
+          paddingLeft: hov && toolbarSide === "left" ? "168px" : "0",
+          paddingRight: hov && toolbarSide === "right" ? "168px" : "0"
+        }}
+      >
 
         {/* Description column */}
         <div style={{display:"flex",alignItems:"flex-start",gap:"5px",paddingLeft:item.type==="included"?"12px":0}}>
