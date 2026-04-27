@@ -384,7 +384,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
   const [insertOpen, setInsertOpen] = useState(false);
   const hideRef = useRef(null);
   const twoCol  = inv.columnMode === "2";
-  const colGrid = twoCol ? "1fr 90px 70px 110px" : "1fr 130px";
+  const colGrid = twoCol ? "1fr 124px 70px 138px" : "1fr 148px";
   const price   = computePrice(item);
   const prevItem = idx > 0 ? inv.items[idx - 1] : null;
   const spacing =
@@ -538,12 +538,17 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
 
         {/* Two-col: unit cost + qty */}
         {twoCol && <>
-          <Editable
-            value={fmtInputNum(item.rate)}
-            onChange={v => onUpd(item.id, "rate", cleanNumericInput(v))}
-            placeholder="—"
-            style={{ fontSize: "14.5px", color: C.gray600, textAlign: "right" }}
-          />
+          <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"4px"}}>
+            {String(item.rate || "").trim() !== "" && (
+              <span style={{fontSize:"11px",color:C.gray400,whiteSpace:"nowrap"}}>{sym}</span>
+            )}
+            <Editable
+              value={fmtInputNum(item.rate)}
+              onChange={v => onUpd(item.id, "rate", cleanNumericInput(v))}
+              placeholder="—"
+              style={{ fontSize: "14.5px", color: C.gray600, textAlign: "right", minWidth:"76px" }}
+            />
+          </div>
           <Editable
             value={item.hours || ""}
             onChange={v => onUpd(item.id, "hours", cleanNumericInput(v))}
@@ -557,32 +562,38 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
         <div style={{ textAlign: "right" }}>
           {item.type === "included" ? (
             <div>
-              <Editable
-                value={String(item.price || "").trim() !== "" ? fmtInputNum(item.price) : (item.includedLabel || "Included")}
-                onChange={v => {
-                  const trimmed = String(v || "").trim();
-                  const numeric = cleanNumericInput(v);
-                  if (trimmed === "") {
+              <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"4px"}}>
+                {String(item.price || "").trim() !== "" && (
+                  <span style={{fontSize:"11px",color:C.gray400,whiteSpace:"nowrap"}}>{sym}</span>
+                )}
+                <Editable
+                  value={String(item.price || "").trim() !== "" ? fmtInputNum(item.price) : (item.includedLabel || "Included")}
+                  onChange={v => {
+                    const trimmed = String(v || "").trim();
+                    const numeric = cleanNumericInput(v);
+                    if (trimmed === "") {
+                      onUpd(item.id, "price", "");
+                      onUpd(item.id, "includedLabel", "Included");
+                      return;
+                    }
+                    if (numeric && parseNum(numeric) !== null) {
+                      onUpd(item.id, "price", numeric);
+                      return;
+                    }
                     onUpd(item.id, "price", "");
-                    onUpd(item.id, "includedLabel", "Included");
-                    return;
-                  }
-                  if (numeric && parseNum(numeric) !== null) {
-                    onUpd(item.id, "price", numeric);
-                    return;
-                  }
-                  onUpd(item.id, "price", "");
-                  onUpd(item.id, "includedLabel", v);
-                }}
-                placeholder="Included"
-                style={{
-                  fontSize: "13.5px",
-                  color: String(item.price || "").trim() !== "" ? C.gray700 : C.gray400,
-                  fontWeight: item.bold ? 700 : 500,
-                  textAlign: "right",
-                  display: "inline-block"
-                }}
-              />
+                    onUpd(item.id, "includedLabel", v);
+                  }}
+                  placeholder="Included"
+                  style={{
+                    fontSize: "13.5px",
+                    color: String(item.price || "").trim() !== "" ? C.gray700 : C.gray400,
+                    fontWeight: item.bold ? 700 : 500,
+                    textAlign: "right",
+                    display: "inline-block",
+                    minWidth: String(item.price || "").trim() !== "" ? "78px" : "auto"
+                  }}
+                />
+              </div>
               <div
                 data-noprint="1"
                 style={{
@@ -606,17 +617,21 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
 
                 return (
                   <>
-                    <Editable
-                      value={shownValue}
-                      onChange={v => onUpd(item.id, "price", cleanNumericInput(v))}
-                      placeholder="0.00"
-                      style={{
-                        fontSize: "13px",
-                        color: item.type === "deduction" ? C.gray600 : C.gray700,
-                        textAlign: "right",
-                        fontWeight: item.bold ? 700 : 500
-                      }}
-                    />
+                    <div style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"4px"}}>
+                      <span style={{fontSize:"11px",color:C.gray400,whiteSpace:"nowrap"}}>{sym}</span>
+                      <Editable
+                        value={shownValue}
+                        onChange={v => onUpd(item.id, "price", cleanNumericInput(v))}
+                        placeholder="0.00"
+                        style={{
+                          fontSize: "13px",
+                          color: item.type === "deduction" ? C.gray600 : C.gray700,
+                          textAlign: "right",
+                          fontWeight: item.bold ? 700 : 500,
+                          minWidth:"84px"
+                        }}
+                      />
+                    </div>
                     <div data-noprint="1" style={{ fontSize: "11px", marginTop: "2px", color: manualOverride ? "#f59e0b" : (autoAmount ? "#059669" : C.gray400) }}>
                       {item.type === "deduction"
                         ? "deducted"
@@ -1385,7 +1400,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
   const cur     = allCurrencies.find(c=>c.code===inv.currency) || allCurrencies[0];
   const sym     = cur ? cur.sym : inv.currency;
   const twoCol  = inv.columnMode === "2";
-  const colGrid = twoCol ? "1fr 90px 70px 110px" : "1fr 130px";
+  const colGrid = twoCol ? "1fr 124px 70px 138px" : "1fr 148px";
   const [pages, setPages] = useState(() => (inv.items.length ? [inv.items] : [[]]));
   const { grand, sub, tax, disc, override } = calcGrandTotal(inv);
   const firstHeaderRef = useRef(null);
@@ -1646,19 +1661,23 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
                 </div>
                 <div style={{ textAlign: "right", minWidth: "220px" }}>
                   <div style={{ ...LS, marginBottom: "6px" }}>Total Due</div>
-                  <Editable
-                    value={override ? fmtInputNum(inv.total) : (grand > 0 ? fmtNum(grand) : "")}
-                    onChange={v => set(p => ({ ...p, total: cleanNumericInput(v) }))}
-                    placeholder="0.00"
-                    style={{
-                      fontSize: "30px",
-                      fontWeight: 700,
-                      color: C.gray900,
-                      letterSpacing: "-0.8px",
-                      lineHeight: 1,
-                      textAlign: "right"
-                    }}
-                  />
+                  <div style={{display:"inline-flex",alignItems:"baseline",justifyContent:"flex-end",gap:"8px"}}>
+                    <span style={{fontSize:"16px",fontWeight:600,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
+                    <Editable
+                      value={override ? fmtInputNum(inv.total) : (grand > 0 ? fmtNum(grand) : "")}
+                      onChange={v => set(p => ({ ...p, total: cleanNumericInput(v) }))}
+                      placeholder="0.00"
+                      style={{
+                        fontSize: "30px",
+                        fontWeight: 700,
+                        color: C.gray900,
+                        letterSpacing: "-0.8px",
+                        lineHeight: 1,
+                        textAlign: "right",
+                        minWidth:"150px"
+                      }}
+                    />
+                  </div>
                   <div data-noprint="1" style={{ fontSize: "10px", marginTop: "4px", color: override ? "#f59e0b" : C.gray400 }}>
                     {override
                       ? "manual total - clear field to return to auto"
@@ -2203,6 +2222,9 @@ export default function App() {
     </>
   );
 }
+
+
+
 
 
 
