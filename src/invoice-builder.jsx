@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 
 /* ─── TOKENS ────────────────────────────────────────────────────────────── */
 const C = {
@@ -379,7 +379,7 @@ function FooterBlockEditor({
 }
 
 /* ─── INVOICE ROW ───────────────────────────────────────────────────────── */
-function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onInsert }) {
+function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onInsert, measureOnly=false, rowRef=null }) {
   const [hov, setHov] = useState(false);
   const [insertOpen, setInsertOpen] = useState(false);
   const hideRef = useRef(null);
@@ -421,22 +421,27 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
 
   return (
     <div
-      onMouseEnter={showControls}
-      onMouseLeave={hideControls}
+      ref={rowRef}
+      onMouseEnter={measureOnly ? undefined : showControls}
+      onMouseLeave={measureOnly ? undefined : hideControls}
       style={{position:"relative", borderBottom:`1px solid ${C.gray100}`,
-        background:hov?"#f8faff":"transparent", transition:"background 0.1s",
+        background:!measureOnly && hov?"#f8faff":"transparent", transition:"background 0.1s",
         overflow:"visible",
-        zIndex:hov ? 20 : 1}}>
+        zIndex:!measureOnly && hov ? 20 : 1}}>
 
       {/* Toolbar lives in the left gutter so it never blocks row content. */}
-      {hov && (
+      {!measureOnly && hov && (
         <div
           data-noprint="1"
           style={{
             position: "absolute",
-            top: "50%",
-            left: "-12px",
-            transform: "translate(-100%, -50%)",
+            top: 0,
+            bottom: 0,
+            left: "-172px",
+            width: "160px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
             zIndex: 50,
             pointerEvents: "all"
           }}
@@ -631,7 +636,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
       </div>
 
       {/* Insert-after + button — hidden in PDF */}
-      {hov && (
+      {!measureOnly && hov && (
         <div
           data-noprint="1"
           style={{position:"absolute",bottom:"-10px",left:"50%",transform:"translateX(-50%)",zIndex:40}}
@@ -1326,14 +1331,69 @@ function paginate(items, { twoCol }) {
   return pages.length ? pages : [[]];
 }
 
+function takeMeasuredPage(items, heights, start, limit) {
+  let used = 0;
+  let i = start;
+
+  while (i < items.length) {
+    const item = items[i];
+    const h = heights[i] || 0;
+    const nextH = heights[i + 1] || 0;
+    const bundle = item.type === "header" && i + 1 < items.length ? h + nextH : h;
+
+    if (i > start && item.type === "header" && used + bundle > limit) break;
+    if (i > start && used + h > limit) break;
+
+    used += h;
+    i += 1;
+  }
+
+  if (i === start) return Math.min(start + 1, items.length);
+  return i;
+}
+
+function paginateMeasured(items, heights, { firstAvail, firstLastAvail, middleAvail, lastAvail }) {
+  if (!items.length) return [[]];
+  if (heights.length !== items.length || heights.some(h => !h || h <= 0)) return [items];
+
+  const totalHeight = heights.reduce((sum, h) => sum + h, 0);
+  if (totalHeight <= firstLastAvail) return [items];
+
+  const pages = [];
+  let start = 0;
+  let end = takeMeasuredPage(items, heights, start, firstAvail);
+  pages.push(items.slice(start, end));
+  start = end;
+
+  while (start < items.length) {
+    const remainingHeight = heights.slice(start).reduce((sum, h) => sum + h, 0);
+    if (remainingHeight <= lastAvail) {
+      pages.push(items.slice(start));
+      break;
+    }
+
+    end = takeMeasuredPage(items, heights, start, middleAvail);
+    pages.push(items.slice(start, end));
+    start = end;
+  }
+
+  return pages;
+}
+
 /* ─── INVOICE CANVAS ────────────────────────────────────────────────────── */
 function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
   const cur     = allCurrencies.find(c=>c.code===inv.currency) || allCurrencies[0];
   const sym     = cur ? cur.sym : inv.currency;
   const twoCol  = inv.columnMode === "2";
   const colGrid = twoCol ? "1fr 90px 70px 110px" : "1fr 130px";
-  const pages   = paginate(inv.items, { twoCol });
+  const [pages, setPages] = useState(() => (inv.items.length ? [inv.items] : [[]]));
   const { grand, sub, tax, disc, override } = calcGrandTotal(inv);
+  const firstHeaderRef = useRef(null);
+  const continuationHeaderRef = useRef(null);
+  const tableHeaderRef = useRef(null);
+  const footerRef = useRef(null);
+  const addRowRef = useRef(null);
+  const measureRowRefs = useRef(new Map());
 
   const updItem = (id,k,v) => set(p=>({...p,items:p.items.map(it=>it.id===id?{...it,[k]:v}:it)}));
   const delItem = id => set(p=>({...p,items:p.items.filter(it=>it.id!==id)}));
@@ -1371,15 +1431,98 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
   const sc = inv.status ? (SC[inv.status]||null) : null;
   const PS = {width:"794px",background:C.white,fontFamily:"Inter,system-ui,sans-serif",color:C.gray900,padding:"56px 64px",boxSizing:"border-box",display:"flex",flexDirection:"column"};
 
+  useLayoutEffect(() => {
+    if (!inv.items.length) {
+      setPages([[]]);
+      return;
+    }
+
+    const rowHeights = inv.items.map(item => {
+      const node = measureRowRefs.current.get(item.id);
+      return node ? node.getBoundingClientRect().height : 0;
+    });
+    if (rowHeights.some(h => !h || h <= 0)) return;
+
+    const innerHeight = 1123 - 56 - 56;
+    const firstHeaderHeight = firstHeaderRef.current?.getBoundingClientRect().height || 220;
+    const continuationHeight = continuationHeaderRef.current?.getBoundingClientRect().height || 52;
+    const tableHeaderHeight = tableHeaderRef.current?.getBoundingClientRect().height || 36;
+    const footerHeight = footerRef.current?.getBoundingClientRect().height || 280;
+    const addRowHeight = addRowRef.current?.getBoundingClientRect().height || 52;
+
+    const nextPages = paginateMeasured(inv.items, rowHeights, {
+      firstAvail: innerHeight - firstHeaderHeight - tableHeaderHeight - 4,
+      firstLastAvail: innerHeight - firstHeaderHeight - tableHeaderHeight - footerHeight - addRowHeight - 4,
+      middleAvail: innerHeight - continuationHeight - tableHeaderHeight - 4,
+      lastAvail: innerHeight - continuationHeight - tableHeaderHeight - footerHeight - addRowHeight - 4,
+    });
+
+    setPages(prev => {
+      const same =
+        prev.length === nextPages.length &&
+        prev.every((page, i) =>
+          page.length === nextPages[i].length &&
+          page.every((row, j) => row.id === nextPages[i][j].id)
+        );
+      return same ? prev : nextPages;
+    });
+  }, [inv, twoCol]);
+
   return (
     <div id="__pr__">
+      <div
+        data-noprint="1"
+        style={{
+          position:"fixed",
+          left:"-99999px",
+          top:0,
+          width:"666px",
+          visibility:"hidden",
+          pointerEvents:"none"
+        }}
+      >
+        <div
+          ref={continuationHeaderRef}
+          style={{
+            display:"flex",
+            justifyContent:"space-between",
+            alignItems:"center",
+            marginBottom:"32px",
+            paddingBottom:"16px",
+            borderBottom:`1px solid ${C.gray200}`
+          }}
+        >
+          <span style={{fontSize:"14px",color:C.gray500,fontWeight:500}}>{inv.agencyName} · {inv.clientName}</span>
+          <span style={{fontSize:"13px",color:C.gray400}}>Page 2</span>
+        </div>
+        {inv.items.map((item, measureIdx) => (
+          <InvoiceRow
+            key={`measure-${item.id}`}
+            item={item}
+            idx={measureIdx}
+            total={inv.items.length}
+            inv={inv}
+            sym={sym}
+            onUpd={()=>{}}
+            onDel={()=>{}}
+            onDup={()=>{}}
+            onMv={()=>{}}
+            onInsert={()=>{}}
+            measureOnly
+            rowRef={node => {
+              if (node) measureRowRefs.current.set(item.id, node);
+              else measureRowRefs.current.delete(item.id);
+            }}
+          />
+        ))}
+      </div>
       {pages.map((rows, pi) => (
         <div key={pi} className="iv-page"
           style={{...PS, minHeight:"1123px", marginBottom:pi<pages.length-1?"32px":0}}>
 
           {/* Page 1 header */}
           {pi===0 && <>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"48px"}}>
+            <div ref={firstHeaderRef} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"48px"}}>
               <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
                 <img src={inv.logoDataUrl || LOGO_B64} alt="logo" style={{height:"32px",width:"32px",objectFit:"contain",borderRadius:"4px"}}/>
                 <Editable value={inv.agencyName} onChange={v=>set(p=>({...p,agencyName:v}))}
@@ -1431,7 +1574,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
           )}
 
           {/* Table header */}
-          <div style={{display:"grid",gridTemplateColumns:colGrid,gap:"12px",
+          <div ref={pi===0 ? tableHeaderRef : undefined} style={{display:"grid",gridTemplateColumns:colGrid,gap:"12px",
             paddingBottom:"10px",borderBottom:`1.5px solid ${C.gray300}`,marginBottom:"2px"}}>
             <div style={LS}>{inv.col1Name||"Description"}</div>
             {twoCol && <>
@@ -1454,14 +1597,14 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
 
           {/* Add row — last page only */}
           {pi===pages.length-1 && (
-            <div data-noprint="1" style={{marginTop:"8px",marginBottom:"12px"}}>
+            <div ref={addRowRef} data-noprint="1" style={{marginTop:"8px",marginBottom:"12px"}}>
               <AddRowMenu onAdd={t=>set(p=>({...p,items:[...p.items,mkItem(t)]}))}/>
             </div>
           )}
 
           {/* Footer — last page only */}
           {pi===pages.length-1 && (
-            <div style={{marginTop:"auto",paddingTop:"28px"}}>
+            <div ref={footerRef} style={{marginTop:"auto",paddingTop:"28px"}}>
               {(inv.taxRate||inv.discountRate) && (
                 <div style={{marginBottom:"16px",paddingBottom:"16px",borderBottom:`1px solid ${C.gray100}`}}>
                   {inv.discountRate && <div style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:"12px",color:C.gray600}}><span>Discount ({inv.discountRate}%)</span><span>−{sym} {fmtNum(disc)}</span></div>}
@@ -2060,6 +2203,7 @@ export default function App() {
     </>
   );
 }
+
 
 
 
