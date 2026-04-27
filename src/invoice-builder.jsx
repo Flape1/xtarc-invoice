@@ -14,9 +14,6 @@ const BASE_CURRENCIES = [
   {code:"CAD",sym:"CA$"},{code:"AUD",sym:"A$"},
 ];
 
-const FIRST_PAGE_ROW_UNITS = 11.6;
-const NEXT_PAGE_ROW_UNITS = 18.4;
-const LAST_PAGE_FOOTER_RESERVE = 4.4;
 const uid = () => Math.random().toString(36).slice(2,8);
 const mkItem = (type="item") => ({
   id:uid(), type, name:"", note:"", hours:"", rate:"", price:"",
@@ -1279,79 +1276,124 @@ function TemplatesModal({ inv, onLoad, onClose, ui }) {
 
 
 /* ─── PAGINATE ──────────────────────────────────────────────────────────── */
-function estimateRowUnits(item, twoCol) {
-  if (!item) return 0;
-  if (item.type === "header") return 1.35;
-  if (item.type === "included") return 0.72;
+function PagesOverviewModal({ pages, onClose, onJump, ui }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: ui.overlay,
+        zIndex: 620,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px"
+      }}
+    >
+      <div
+        style={{
+          width: "min(1080px, calc(100vw - 32px))",
+          maxHeight: "86vh",
+          background: ui.panel,
+          border: `1px solid ${ui.border}`,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+          display: "flex",
+          flexDirection: "column"
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "18px 22px",
+            borderBottom: `1px solid ${ui.border}`
+          }}
+        >
+          <div>
+            <div style={{ fontSize: "15px", fontWeight: 600, color: ui.text }}>Page Overview</div>
+            <div style={{ fontSize: "11px", color: ui.muted, marginTop: "2px", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Jump across the full invoice
+            </div>
+          </div>
 
-  let units = 1.04;
-  if (String(item.note || "").trim()) units += 0.28;
-  if (!twoCol) units += 0.22;
-  if (item.type === "deduction") units += 0.08;
-  return units;
-}
+          <button
+            onClick={onClose}
+            style={{
+              background: "transparent",
+              border: `1px solid ${ui.border}`,
+              color: ui.muted,
+              width: "34px",
+              height: "34px",
+              cursor: "pointer",
+              fontSize: "16px"
+            }}
+          >
+            x
+          </button>
+        </div>
 
-function paginateForward(items, twoCol, firstLimit, nextLimit) {
-  if (!items.length) return [];
-  const pages = [];
-  let i = 0;
+        <div
+          style={{
+            padding: "20px 22px 24px",
+            overflowY: "auto",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "16px"
+          }}
+        >
+          {pages.map(page => (
+            <button
+              key={page.number}
+              onClick={() => onJump(page.number)}
+              style={{
+                background: ui.card,
+                border: `1px solid ${ui.border}`,
+                padding: "14px",
+                textAlign: "left",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                color: ui.text
+              }}
+            >
+              <div
+                style={{
+                  aspectRatio: "1 / 1.414",
+                  background: "#ffffff",
+                  border: "1px solid #d9dfe6",
+                  padding: "12px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  boxShadow: "0 8px 18px rgba(15,23,42,0.06)"
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#94a3b8", marginBottom: "10px" }}>
+                    Page {page.number}
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#111827", lineHeight: 1.3, marginBottom: "10px" }}>
+                    {page.title}
+                  </div>
+                  <div style={{ display: "grid", gap: "6px" }}>
+                    {page.previewLines.map((line, idx) => (
+                      <div key={`${page.number}-${idx}`} style={{ fontSize: "10px", color: "#4b5563", lineHeight: 1.35 }}>
+                        {line}
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-  while (i < items.length) {
-    const page = [];
-    const limit = pages.length === 0 ? firstLimit : nextLimit;
-    let used = 0;
-
-    while (i < items.length) {
-      const item = items[i];
-      const next = items[i + 1];
-      const itemUnits = estimateRowUnits(item, twoCol);
-      const bundleUnits =
-        item.type === "header" && next ? itemUnits + estimateRowUnits(next, twoCol) : itemUnits;
-
-      if (page.length > 0 && item.type === "header" && used + bundleUnits > limit) break;
-      if (page.length > 0 && used + itemUnits > limit) break;
-
-      page.push(item);
-      used += itemUnits;
-      i += 1;
-    }
-
-    if (!page.length) {
-      page.push(items[i]);
-      i += 1;
-    }
-
-    pages.push(page);
-  }
-
-  return pages;
-}
-
-function paginate(items, { twoCol }) {
-  if (!items.length) return [[]];
-
-  const lastLimit = NEXT_PAGE_ROW_UNITS - LAST_PAGE_FOOTER_RESERVE;
-  let splitIndex = items.length;
-  let used = 0;
-
-  while (splitIndex > 0) {
-    const prevIndex = splitIndex - 1;
-    const prevItem = items[prevIndex];
-    const prevUnits = estimateRowUnits(prevItem, twoCol);
-
-    if (used > 0 && prevItem.type === "header") break;
-    if (used > 0 && used + prevUnits > lastLimit) break;
-
-    used += prevUnits;
-    splitIndex = prevIndex;
-  }
-
-  const prefix = items.slice(0, splitIndex);
-  const lastPage = items.slice(splitIndex);
-  const pages = paginateForward(prefix, twoCol, FIRST_PAGE_ROW_UNITS, NEXT_PAGE_ROW_UNITS);
-
-  if (lastPage.length) pages.push(lastPage);
-  return pages.length ? pages : [[]];
+                <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "12px" }}>
+                  {page.rowCount} rows{page.hasFooter ? " • footer" : ""}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function takeMeasuredPage(items, heights, start, limit) {
@@ -1404,7 +1446,7 @@ function paginateMeasured(items, heights, { firstAvail, firstLastAvail, middleAv
 }
 
 /* ─── INVOICE CANVAS ────────────────────────────────────────────────────── */
-function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
+function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
   const cur     = allCurrencies.find(c=>c.code===inv.currency) || allCurrencies[0];
   const sym     = cur ? cur.sym : inv.currency;
   const twoCol  = inv.columnMode === "2";
@@ -1491,6 +1533,31 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
     });
   }, [inv, twoCol]);
 
+  useEffect(() => {
+    if (!onPagesChange) return;
+    onPagesChange(
+      pages.map((rows, index) => {
+        const firstNamedRow = rows.find(row => String(row.name || "").trim());
+        const title =
+          index === 0
+            ? (inv.clientName || inv.agencyName || "Invoice")
+            : (firstNamedRow?.name || `Continuation ${index + 1}`);
+        const previewLines = rows
+          .slice(0, 4)
+          .map(row => row.name || row.note || row.type || "Row")
+          .filter(Boolean);
+
+        return {
+          number: index + 1,
+          title,
+          previewLines,
+          rowCount: rows.length,
+          hasFooter: index === pages.length - 1,
+        };
+      })
+    );
+  }, [pages, inv.clientName, inv.agencyName, onPagesChange]);
+
   return (
     <div id="__pr__">
       <div
@@ -1540,7 +1607,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
         ))}
       </div>
       {pages.map((rows, pi) => (
-        <div key={pi} className="iv-page"
+        <div key={pi} id={`invoice-page-${pi + 1}`} className="iv-page"
           style={{...PS, minHeight:"1123px", marginBottom:pi<pages.length-1?"32px":0}}>
 
           {/* Page 1 header */}
@@ -1780,8 +1847,10 @@ export default function App() {
   const [inv, setInv, undo, redo, canUndo, canRedo] = useUndoable(DEF_INV);
   const [showSettings,  setShowSettings]  = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showPages,     setShowPages]     = useState(false);
   const [loading,       setLoading]       = useState(false);
   const [showQual,      setShowQual]      = useState(false);
+  const [pageMeta,      setPageMeta]      = useState([]);
   const [dark,          setDark]          = useState(() => {
     try { return JSON.parse(localStorage.getItem("xtarc_ui_dark") || "true"); }
     catch { return true; }
@@ -1845,22 +1914,22 @@ export default function App() {
 
   //Helper
   const saveDefaultLogo = dataUrl => {
-  setInv(p => ({ ...p, logoDataUrl: dataUrl || assets.logo }));
-  if (dataUrl) localStorage.setItem("xtarc_default_logo", dataUrl);
-  else localStorage.removeItem("xtarc_default_logo");
-}; 
+    setInv(p => ({ ...p, logoDataUrl: dataUrl || assets.logo }));
+    if (dataUrl) localStorage.setItem("xtarc_default_logo", dataUrl);
+    else localStorage.removeItem("xtarc_default_logo");
+  };
 
   // Load stored signature on mount
   useEffect(() => {
-  const storedSig = localStorage.getItem("xtarc_default_sig");
-  const storedLogo = localStorage.getItem("xtarc_default_logo");
+    const storedSig = localStorage.getItem("xtarc_default_sig");
+    const storedLogo = localStorage.getItem("xtarc_default_logo");
 
-  setInv(p => ({
-    ...p,
-    signatureDataUrl: storedSig || assets.sig,
-    logoDataUrl: storedLogo || assets.logo,
-  }));
-}, []);
+    setInv(p => ({
+      ...p,
+      signatureDataUrl: storedSig || p.signatureDataUrl || "",
+      logoDataUrl: storedLogo || assets.logo,
+    }));
+  }, []);
   useEffect(() => {
     localStorage.setItem("xtarc_ui_dark", JSON.stringify(dark));
   }, [dark]);
@@ -1869,6 +1938,13 @@ export default function App() {
     setInv(p=>({...p,signatureDataUrl:dataUrl}));
     if (dataUrl) localStorage.setItem("xtarc_default_sig", dataUrl);
     else localStorage.removeItem("xtarc_default_sig");
+  };
+
+  const jumpToPage = pageNumber => {
+    const el = document.getElementById(`invoice-page-${pageNumber}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    setShowPages(false);
   };
 
   const loadScript = src => new Promise((res,rej) => {
@@ -2036,6 +2112,15 @@ export default function App() {
         />
       )}
 
+      {showPages && (
+        <PagesOverviewModal
+          pages={pageMeta}
+          ui={UI}
+          onClose={() => setShowPages(false)}
+          onJump={jumpToPage}
+        />
+      )}
+
       <div
         style={{
           minHeight: "100vh",
@@ -2104,6 +2189,9 @@ export default function App() {
               <button onClick={() => setShowTemplates(true)} style={{ ...GBS("outline"), minWidth: "88px" }}>
                 Templates
               </button>
+              <button onClick={() => setShowPages(true)} style={{ ...GBS("outline"), minWidth: "78px" }}>
+                Pages
+              </button>
               <button onClick={() => setShowSettings(s => !s)} style={{ ...GBS(showSettings ? "dark" : "outline"), minWidth: "84px" }}>
                 Settings
               </button>
@@ -2169,7 +2257,7 @@ export default function App() {
                         borderBottom: `1px solid ${UI.softBorder}`
                       }}
                     >
-                      <div style={{ fontSize: "12px", fontWeight: item.bold ? 700 : 500, color: UI.text }}>{l}</div>
+                      <div style={{ fontSize: "12px", fontWeight: 600, color: UI.text }}>{l}</div>
                       <div style={{ fontSize: "11px", color: UI.muted }}>{d}</div>
                     </button>
                   ))}
@@ -2184,15 +2272,46 @@ export default function App() {
           className="invoice-canvas-outer"
           style={{
             padding: "36px 24px 48px",
-            display: "flex",
-            justifyContent: "center",
+            display: "grid",
+            gap: "14px",
             overflowX: "auto"
           }}
         >
+          {pageMeta.length > 1 && (
+            <div
+              data-noprint="1"
+              style={{
+                width: "100%",
+                maxWidth: "1280px",
+                margin: "0 auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                padding: dark ? "0 0 6px" : "0"
+              }}
+            >
+              <div style={{ fontSize: "12px", color: UI.muted }}>
+                {pageMeta.length} pages in this invoice
+              </div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {pageMeta.map(page => (
+                  <button
+                    key={page.number}
+                    onClick={() => jumpToPage(page.number)}
+                    style={{ ...GBS("outline"), minWidth: "68px" }}
+                  >
+                    Pg {page.number}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div
             style={{
               width: "100%",
               maxWidth: "1280px",
+              margin: "0 auto",
               border: dark ? `1px solid ${UI.border}` : "none",
               background: dark ? UI.panel : "transparent",
               padding: dark ? "28px" : "8px 0",
@@ -2205,7 +2324,7 @@ export default function App() {
                 set={setInv}
                 allCurrencies={allCurrencies}
                 LOGO_B64={inv.logoDataUrl || assets.logo}
-                SIG_B64_FALLBACK={assets.sig}
+                onPagesChange={setPageMeta}
               />
             </MobileScaler>
           </div>
