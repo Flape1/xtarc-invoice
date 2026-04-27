@@ -290,6 +290,75 @@ function RowToolbar({ item, onDel, onDup, onMv, onChangeType, onBold, onItalic, 
   );
 }
 
+function FooterBlockToolbar({ bold, italic, onBold, onItalic, onMove, canUp, canDown }) {
+  return (
+    <div style={{display:"inline-flex",alignItems:"center",gap:"2px",padding:"4px 8px",
+      background:"#1e293b",borderRadius:"8px",
+      boxShadow:"0 4px 14px rgba(0,0,0,0.2)",border:"1px solid rgba(255,255,255,0.07)"}}>
+      <span style={{color:"#64748b",fontSize:"12px",padding:"2px 4px",cursor:"grab",userSelect:"none"}} draggable>≡</span>
+      <div style={{width:"1px",height:"14px",background:"rgba(255,255,255,0.1)",margin:"0 2px"}}/>
+      <button onClick={onBold}   title="Bold"   style={{background:bold?"rgba(255,255,255,0.12)":"transparent",border:"none",color:bold?"#fff":"#64748b",fontSize:"12px",fontWeight:700,cursor:"pointer",padding:"3px 6px",borderRadius:"4px",lineHeight:1}}>B</button>
+      <button onClick={onItalic} title="Italic" style={{background:italic?"rgba(255,255,255,0.12)":"transparent",border:"none",color:italic?"#fff":"#64748b",fontSize:"12px",fontStyle:"italic",cursor:"pointer",padding:"3px 6px",borderRadius:"4px",lineHeight:1}}>I</button>
+      <div style={{width:"1px",height:"14px",background:"rgba(255,255,255,0.1)",margin:"0 2px"}}/>
+      <button onClick={()=>onMove(-1)} disabled={!canUp}   style={{background:"transparent",border:"none",color:canUp?"#94a3b8":"#334155",fontSize:"12px",cursor:canUp?"pointer":"default",padding:"2px 5px",borderRadius:"4px"}}>↑</button>
+      <button onClick={()=>onMove(1)}  disabled={!canDown} style={{background:"transparent",border:"none",color:canDown?"#94a3b8":"#334155",fontSize:"12px",cursor:canDown?"pointer":"default",padding:"2px 5px",borderRadius:"4px"}}>↓</button>
+    </div>
+  );
+}
+
+function FooterBlockEditor({
+  blockKey, title, value, placeholder, onChange,
+  bold, italic, onBold, onItalic, onMove, canUp, canDown,
+  onDragStart, onDrop
+}) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div
+      onMouseEnter={()=>setHov(true)}
+      onMouseLeave={()=>setHov(false)}
+      onDrop={e=>onDrop(e, blockKey)}
+      onDragOver={e=>e.preventDefault()}
+      style={{position:"relative"}}
+    >
+      {hov && (
+        <div
+          data-noprint="1"
+          style={{position:"absolute",top:"-30px",right:0,zIndex:50}}
+          onMouseEnter={()=>setHov(true)}
+        >
+          <div draggable onDragStart={e=>onDragStart(e, blockKey)}>
+            <FooterBlockToolbar
+              bold={bold}
+              italic={italic}
+              onBold={onBold}
+              onItalic={onItalic}
+              onMove={onMove}
+              canUp={canUp}
+              canDown={canDown}
+            />
+          </div>
+        </div>
+      )}
+      <div style={{fontSize:"11px",fontWeight:600,color:C.gray400,letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:"6px"}}>
+        {title}
+      </div>
+      <Editable
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        multiline
+        style={{
+          fontSize:"12px",
+          color:blockKey==="paymentTerms" ? C.gray500 : C.gray400,
+          lineHeight:1.6,
+          fontWeight:bold ? 700 : 400,
+          fontStyle:italic ? "italic" : "normal"
+        }}
+      />
+    </div>
+  );
+}
+
 /* ─── INVOICE ROW ───────────────────────────────────────────────────────── */
 function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onInsert }) {
   const [hov, setHov] = useState(false);
@@ -1081,6 +1150,26 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
     if (!sid || sid===tid) return;
     set(p=>{const a=[...p.items],si=a.findIndex(x=>x.id===sid),ti=a.findIndex(x=>x.id===tid);if(si<0||ti<0)return p;const[item]=a.splice(si,1);a.splice(ti,0,item);return{...p,items:a};});
   };
+  const footerOrder = inv.footerOrder && inv.footerOrder.length ? inv.footerOrder : ["paymentTerms","notes"];
+  const moveFooterBlock = (key, dir) => set(p => {
+    const order = [...(p.footerOrder && p.footerOrder.length ? p.footerOrder : ["paymentTerms","notes"])];
+    const i = order.indexOf(key), j = i + dir;
+    if (i < 0 || j < 0 || j >= order.length) return p;
+    [order[i], order[j]] = [order[j], order[i]];
+    return { ...p, footerOrder: order };
+  });
+  const onFooterDrop = (e, targetKey) => {
+    const sourceKey = e.dataTransfer.getData("footerBlockKey");
+    if (!sourceKey || sourceKey === targetKey) return;
+    set(p => {
+      const order = [...(p.footerOrder && p.footerOrder.length ? p.footerOrder : ["paymentTerms","notes"])];
+      const si = order.indexOf(sourceKey), ti = order.indexOf(targetKey);
+      if (si < 0 || ti < 0) return p;
+      const [moved] = order.splice(si, 1);
+      order.splice(ti, 0, moved);
+      return { ...p, footerOrder: order };
+    });
+  };
 
   const LS = {fontSize:"11px",fontWeight:600,color:C.gray400,letterSpacing:"0.07em",textTransform:"uppercase"};
   const SC = {Draft:{bg:"#f1f5f9",c:"#475569"},Sent:{bg:"#dbeafe",c:"#1d4ed8"},Paid:{bg:"#dcfce7",c:"#166534"},Overdue:{bg:"#fee2e2",c:"#dc2626"}};
@@ -1185,27 +1274,25 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
                 </div>
               )}
               <div style={{ display: "grid", gap: "14px", marginBottom: "32px" }}>
-                <div>
-                  <div style={{ ...LS, marginBottom: "6px" }}>Payment Terms</div>
-                  <Editable
-                    value={inv.paymentTerms || ""}
-                    onChange={v => set(p => ({ ...p, paymentTerms: v }))}
-                    placeholder="Net 15, bank transfer, upfront deposit, milestone terms..."
-                    multiline
-                    style={{ fontSize: "12px", color: C.gray500, lineHeight: 1.6 }}
+                {footerOrder.map((key, index) => (
+                  <FooterBlockEditor
+                    key={key}
+                    blockKey={key}
+                    title={key === "paymentTerms" ? "Payment Terms" : "Notes"}
+                    value={key === "paymentTerms" ? (inv.paymentTerms || "") : inv.notes}
+                    placeholder={key === "paymentTerms" ? "Net 15, bank transfer, upfront deposit, milestone terms..." : "Footer notes..."}
+                    onChange={v => set(p => ({ ...p, [key]: v }))}
+                    bold={!!inv[`${key}Bold`]}
+                    italic={!!inv[`${key}Italic`]}
+                    onBold={() => set(p => ({ ...p, [`${key}Bold`]: !p[`${key}Bold`] }))}
+                    onItalic={() => set(p => ({ ...p, [`${key}Italic`]: !p[`${key}Italic`] }))}
+                    onMove={dir => moveFooterBlock(key, dir)}
+                    canUp={index > 0}
+                    canDown={index < footerOrder.length - 1}
+                    onDragStart={(e, blockKey) => e.dataTransfer.setData("footerBlockKey", blockKey)}
+                    onDrop={onFooterDrop}
                   />
-                </div>
-
-                <div>
-                  <div style={{ ...LS, marginBottom: "6px" }}>Notes</div>
-                  <Editable
-                    value={inv.notes}
-                    onChange={v => set(p => ({ ...p, notes: v }))}
-                    placeholder="Footer notes..."
-                    multiline
-                    style={{ fontSize: "12px", color: C.gray400, lineHeight: 1.6 }}
-                  />
-                </div>
+                ))}
               </div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
 
@@ -1307,6 +1394,11 @@ export default function App() {
     pdfQuality:"medium", status:"",
     logoDataUrl: "",
     paymentTerms: "",
+    footerOrder: ["paymentTerms","notes"],
+    paymentTermsBold: false,
+    paymentTermsItalic: false,
+    notesBold: false,
+    notesItalic: false,
     notes:"All work is reviewed and verified by the client before final delivery.",
     items:[
       {id:uid(),type:"header",   name:"Website Layout Design",note:"Per hour · PKR 2,800",hours:"6.98",rate:"2800",price:"",bold:true, italic:false,includedLabel:"Included"},
