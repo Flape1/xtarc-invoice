@@ -1847,10 +1847,11 @@ export default function App() {
   const [inv, setInv, undo, redo, canUndo, canRedo] = useUndoable(DEF_INV);
   const [showSettings,  setShowSettings]  = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [showPages,     setShowPages]     = useState(false);
+  const [showPages,     setShowPages]     = useState(() => (typeof window !== "undefined" ? window.innerWidth > 1180 : true));
   const [loading,       setLoading]       = useState(false);
   const [showQual,      setShowQual]      = useState(false);
   const [pageMeta,      setPageMeta]      = useState([]);
+  const [currentPage,   setCurrentPage]   = useState(1);
   const [dark,          setDark]          = useState(() => {
     try { return JSON.parse(localStorage.getItem("xtarc_ui_dark") || "true"); }
     catch { return true; }
@@ -1934,6 +1935,30 @@ export default function App() {
     localStorage.setItem("xtarc_ui_dark", JSON.stringify(dark));
   }, [dark]);
 
+  useEffect(() => {
+    if (!pageMeta.length) return;
+    const els = pageMeta
+      .map(page => document.getElementById(`invoice-page-${page.number}`))
+      .filter(Boolean);
+    if (!els.length) return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        const visible = entries
+          .filter(entry => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (!visible.length) return;
+        const id = visible[0].target.id;
+        const match = id.match(/invoice-page-(\d+)/);
+        if (match) setCurrentPage(Number(match[1]));
+      },
+      { threshold: [0.25, 0.45, 0.65], rootMargin: "-90px 0px -35% 0px" }
+    );
+
+    els.forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, [pageMeta]);
+
   const saveDefaultSig = dataUrl => {
     setInv(p=>({...p,signatureDataUrl:dataUrl}));
     if (dataUrl) localStorage.setItem("xtarc_default_sig", dataUrl);
@@ -1944,7 +1969,7 @@ export default function App() {
     const el = document.getElementById(`invoice-page-${pageNumber}`);
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "start" });
-    setShowPages(false);
+    setCurrentPage(pageNumber);
   };
 
   const loadScript = src => new Promise((res,rej) => {
@@ -2097,6 +2122,10 @@ export default function App() {
           .topbar-btn-label { display: none !important; }
           .invoice-scale-wrapper { transform: none !important; width: 100% !important; }
           .invoice-canvas-outer { padding: 12px 8px !important; }
+          .workspace-shell { grid-template-columns: 1fr !important; }
+          .page-pane { order: -1; max-height: none !important; overflow-x: auto !important; overflow-y: hidden !important; }
+          .page-pane-track { display: flex !important; flex-direction: row !important; }
+          .page-thumb { min-width: 148px !important; }
         }
         @media (max-width: 480px) {
           .topbar-actions { gap: 4px !important; }
@@ -2109,15 +2138,6 @@ export default function App() {
           ui={UI}
           onLoad={d => setInv({ ...d, items: (d.items || []).map(i => ({ ...i, id: uid() })) })}
           onClose={() => setShowTemplates(false)}
-        />
-      )}
-
-      {showPages && (
-        <PagesOverviewModal
-          pages={pageMeta}
-          ui={UI}
-          onClose={() => setShowPages(false)}
-          onJump={jumpToPage}
         />
       )}
 
@@ -2189,8 +2209,8 @@ export default function App() {
               <button onClick={() => setShowTemplates(true)} style={{ ...GBS("outline"), minWidth: "88px" }}>
                 Templates
               </button>
-              <button onClick={() => setShowPages(true)} style={{ ...GBS("outline"), minWidth: "78px" }}>
-                Pages
+              <button onClick={() => setShowPages(v => !v)} style={{ ...GBS(showPages ? "dark" : "outline"), minWidth: "78px" }}>
+                Pane
               </button>
               <button onClick={() => setShowSettings(s => !s)} style={{ ...GBS(showSettings ? "dark" : "outline"), minWidth: "84px" }}>
                 Settings
@@ -2272,61 +2292,124 @@ export default function App() {
           className="invoice-canvas-outer"
           style={{
             padding: "36px 24px 48px",
-            display: "grid",
-            gap: "14px",
+            display: "flex",
+            justifyContent: "center",
             overflowX: "auto"
           }}
         >
-          {pageMeta.length > 1 && (
-            <div
-              data-noprint="1"
-              style={{
-                width: "100%",
-                maxWidth: "1280px",
-                margin: "0 auto",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "12px",
-                padding: dark ? "0 0 6px" : "0"
-              }}
-            >
-              <div style={{ fontSize: "12px", color: UI.muted }}>
-                {pageMeta.length} pages in this invoice
-              </div>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                {pageMeta.map(page => (
-                  <button
-                    key={page.number}
-                    onClick={() => jumpToPage(page.number)}
-                    style={{ ...GBS("outline"), minWidth: "68px" }}
-                  >
-                    Pg {page.number}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
           <div
+            className="workspace-shell"
             style={{
               width: "100%",
-              maxWidth: "1280px",
+              maxWidth: showPages && pageMeta.length > 1 ? "1460px" : "1280px",
               margin: "0 auto",
-              border: dark ? `1px solid ${UI.border}` : "none",
-              background: dark ? UI.panel : "transparent",
-              padding: dark ? "28px" : "8px 0",
-              boxShadow: dark ? UI.stageShadow : "none"
+              display: "grid",
+              gridTemplateColumns: showPages && pageMeta.length > 1 ? "220px minmax(0, 1fr)" : "minmax(0, 1fr)",
+              gap: "18px",
+              alignItems: "start"
             }}
           >
-            <MobileScaler>
-              <InvoiceCanvas
-                inv={inv}
-                set={setInv}
-                allCurrencies={allCurrencies}
-                LOGO_B64={inv.logoDataUrl || assets.logo}
-                onPagesChange={setPageMeta}
-              />
-            </MobileScaler>
+            {showPages && pageMeta.length > 1 && (
+              <aside
+                data-noprint="1"
+                className="page-pane"
+                style={{
+                  position: "sticky",
+                  top: "94px",
+                  maxHeight: "calc(100vh - 132px)",
+                  overflowY: "auto",
+                  border: `1px solid ${UI.border}`,
+                  background: dark ? UI.panel : UI.card,
+                  boxShadow: dark ? "0 16px 40px rgba(0,0,0,0.24)" : "0 10px 28px rgba(15,23,42,0.08)",
+                  padding: "12px"
+                }}
+              >
+                <div style={{ padding: "4px 4px 10px" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: UI.section, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    Pages
+                  </div>
+                  <div style={{ fontSize: "12px", color: UI.muted, marginTop: "4px" }}>
+                    {pageMeta.length} page{pageMeta.length === 1 ? "" : "s"}
+                  </div>
+                </div>
+
+                <div className="page-pane-track" style={{ display: "grid", gap: "12px" }}>
+                  {pageMeta.map(page => {
+                    const active = currentPage === page.number;
+                    return (
+                      <button
+                        key={page.number}
+                        className="page-thumb"
+                        onClick={() => jumpToPage(page.number)}
+                        style={{
+                          width: "100%",
+                          background: active ? (dark ? "rgba(37,99,235,0.12)" : "#eef4ff") : "transparent",
+                          border: `1px solid ${active ? C.accent : UI.border}`,
+                          padding: "10px",
+                          textAlign: "left",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          color: UI.text,
+                          boxShadow: active ? "0 10px 24px rgba(37,99,235,0.14)" : "none"
+                        }}
+                      >
+                        <div
+                          style={{
+                            aspectRatio: "1 / 1.414",
+                            background: "#ffffff",
+                            border: `1px solid ${active ? "#93c5fd" : "#d9dfe6"}`,
+                            padding: "10px",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                            boxShadow: "0 8px 18px rgba(15,23,42,0.06)"
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: "10px", fontWeight: 700, color: active ? "#2563eb" : "#94a3b8", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "8px" }}>
+                              Page {page.number}
+                            </div>
+                            <div style={{ fontSize: "11px", fontWeight: 700, color: "#111827", lineHeight: 1.25, marginBottom: "8px" }}>
+                              {page.title}
+                            </div>
+                            <div style={{ display: "grid", gap: "4px" }}>
+                              {page.previewLines.slice(0, 4).map((line, idx) => (
+                                <div key={`${page.number}-${idx}`} style={{ fontSize: "9px", color: "#4b5563", lineHeight: 1.3 }}>
+                                  {line}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: "9px", color: "#94a3b8", marginTop: "10px" }}>
+                            {page.rowCount} rows{page.hasFooter ? " • footer" : ""}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </aside>
+            )}
+
+            <div
+              style={{
+                width: "100%",
+                border: dark ? `1px solid ${UI.border}` : "none",
+                background: dark ? UI.panel : "transparent",
+                padding: dark ? "28px" : "8px 0",
+                boxShadow: dark ? UI.stageShadow : "none"
+              }}
+            >
+              <MobileScaler>
+                <InvoiceCanvas
+                  inv={inv}
+                  set={setInv}
+                  allCurrencies={allCurrencies}
+                  LOGO_B64={inv.logoDataUrl || assets.logo}
+                  onPagesChange={setPageMeta}
+                />
+              </MobileScaler>
+            </div>
           </div>
         </div>
       </div>
