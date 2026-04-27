@@ -446,8 +446,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
             opacity:hov?1:0,transition:"opacity 0.15s",userSelect:"none"}}
             draggable onDragStart={e=>e.dataTransfer.setData("rowId",item.id)}>⠿</span>
           <div style={{flex:1,minWidth:0}}>
-            {item.type==="included" && <div style={{width:"3px",height:"3px",borderRadius:"50%",background:C.gray300,marginBottom:"5px"}}/>}
-            <Editable value={item.name} onChange={v=>onUpd(item.id,"name",v)}
+                        <Editable value={item.name} onChange={v=>onUpd(item.id,"name",v)}
               placeholder={item.type==="header"?"Section name…":item.type==="included"?"Included item…":item.type==="deduction"?"Deduction…":"Item description…"}
               style={ns}/>
             {/* Note — editable for non-included */}
@@ -546,7 +545,7 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
                 style={{
                   fontSize: "12px",
                   color: String(item.price || "").trim() !== "" ? C.gray700 : C.gray400,
-                  fontWeight: 500,
+                  fontWeight: item.bold ? 700 : 500,
                   textAlign: "right",
                   display: "inline-block"
                 }}
@@ -1856,7 +1855,7 @@ export default function App() {
                         borderBottom: `1px solid ${UI.softBorder}`
                       }}
                     >
-                      <div style={{ fontSize: "12px", fontWeight: 500, color: UI.text }}>{l}</div>
+                      <div style={{ fontSize: "12px", fontWeight: item.bold ? 700 : 500, color: UI.text }}>{l}</div>
                       <div style={{ fontSize: "11px", color: UI.muted }}>{d}</div>
                     </button>
                   ))}
@@ -1929,6 +1928,7 @@ export default function App() {
     </>
   );
 }
+
 
 
 
