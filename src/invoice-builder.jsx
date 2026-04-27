@@ -1609,13 +1609,17 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64 }) {
 
           {/* Rows */}
           <div style={{flex:1,overflow:"visible",paddingTop:"4px"}} onDragOver={e=>e.preventDefault()}>
-            {rows.map(item => (
-              <div key={item.id} onDrop={e=>onDrop(e,item.id)} onDragOver={e=>e.preventDefault()}>
-                <InvoiceRow item={item} idx={inv.items.indexOf(item)} total={inv.items.length}
-                  inv={inv} sym={sym}
-                  onUpd={updItem} onDel={delItem} onDup={dupItem} onMv={mvItem} onInsert={insertAfter}/>
-              </div>
-            ))}
+            {rows.map(rowItem => {
+              const liveIdx = inv.items.findIndex(it => it.id === rowItem.id);
+              const liveItem = liveIdx >= 0 ? inv.items[liveIdx] : rowItem;
+              return (
+                <div key={rowItem.id} onDrop={e=>onDrop(e,rowItem.id)} onDragOver={e=>e.preventDefault()}>
+                  <InvoiceRow item={liveItem} idx={liveIdx >= 0 ? liveIdx : 0} total={inv.items.length}
+                    inv={inv} sym={sym}
+                    onUpd={updItem} onDel={delItem} onDup={dupItem} onMv={mvItem} onInsert={insertAfter}/>
+                </div>
+              );
+            })}
           </div>
 
           {/* Add row — last page only */}
