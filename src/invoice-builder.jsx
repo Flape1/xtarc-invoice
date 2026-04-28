@@ -629,7 +629,9 @@ function InvoiceRow({ item, idx, total, inv, sym, onUpd, onDel, onDup, onMv, onI
                 return (
                   <>
                     <div className="money-inline" style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-end",gap:"2px"}}>
-                      <span style={{fontSize:"11px",fontWeight:700,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
+                      {(manualOverride || autoAmount) && (
+                        <span style={{fontSize:"11px",fontWeight:700,color:C.gray500,whiteSpace:"nowrap"}}>{sym}</span>
+                      )}
                       <Editable
                         value={shownValue}
                         onChange={v => onUpd(item.id, "price", cleanNumericInput(v))}
@@ -1609,7 +1611,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
               </div>
               <div>
                 <div style={{...LS,marginBottom:"3px"}}>Due Date</div>
-                <div style={{fontSize:"14px",color:C.gray700,lineHeight:1.35}}>{inv.dueDate || "—"}</div>
+                <div style={{fontSize:"14px",color:C.gray700,lineHeight:1.35}}>{inv.dueDate || ""}</div>
               </div>
             </div>
           </div>
@@ -1679,7 +1681,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
                   fontWeight:inv[`${key}Bold`] ? 700 : 400,
                   fontStyle:inv[`${key}Italic`] ? "italic" : "normal"
                 }}>
-                  {key === "paymentTerms" ? (inv.paymentTerms || "Payment terms") : (inv.notes || "Notes")}
+                  {key === "paymentTerms" ? (inv.paymentTerms || "") : (inv.notes || "")}
                 </div>
               </div>
             ))}
@@ -1691,7 +1693,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
               ) : (
                 <div style={{width:"80px",height:"1px",background:C.gray200,marginBottom:"8px"}}/>
               )}
-              <div style={{fontSize:"14px",color:C.gray500,fontWeight:500}}>{inv.founderLabel || "Signatory"}</div>
+              <div style={{fontSize:"14px",color:C.gray500,fontWeight:500}}>{inv.founderLabel || ""}</div>
             </div>
             <div style={{ textAlign: "right", minWidth: "220px" }}>
               <div style={{ ...LS, marginBottom: "6px" }}>Total Due</div>
@@ -1950,6 +1952,7 @@ export default function App() {
   const [loading,       setLoading]       = useState(false);
   const [showQual,      setShowQual]      = useState(false);
   const [pageMeta,      setPageMeta]      = useState([]);
+  const [pageThumbs,    setPageThumbs]    = useState({});
   const [currentPage,   setCurrentPage]   = useState(1);
   const [dark,          setDark]          = useState(() => {
     try { return JSON.parse(localStorage.getItem("xtarc_ui_dark") || "true"); }
@@ -2076,6 +2079,71 @@ export default function App() {
     const s = document.createElement("script"); s.src=src; s.onload=res; s.onerror=rej;
     document.head.appendChild(s);
   });
+
+  useEffect(() => {
+    if (!showPages || !pageMeta.length) return;
+
+    let cancelled = false;
+    const capture = async () => {
+      try {
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+        if (cancelled || !window.html2canvas) return;
+
+        const nextThumbs = {};
+        for (const page of pageMeta) {
+          const el = document.getElementById(`invoice-page-${page.number}`);
+          if (!el) continue;
+          const canvas = await window.html2canvas(el, {
+            scale: 0.22,
+            backgroundColor: "#ffffff",
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            imageTimeout: 0,
+            onclone: (doc) => {
+              doc.querySelectorAll("[data-noprint]").forEach(n => { n.style.display = "none"; });
+              doc.querySelectorAll(".edit-placeholder").forEach(n => { n.style.display = "none"; });
+              doc.querySelectorAll(".editable-field").forEach(n => {
+                n.style.border = "none";
+                n.style.outline = "none";
+                n.style.boxShadow = "none";
+                n.style.background = "transparent";
+                n.style.padding = "0";
+                n.style.margin = "0";
+                n.style.borderRadius = "0";
+                n.style.minHeight = "0";
+              });
+              doc.querySelectorAll(".money-inline .editable-field").forEach(n => {
+                n.style.minWidth = "0";
+                n.style.width = "auto";
+                n.style.display = "inline-block";
+              });
+              doc.querySelectorAll("input, textarea").forEach(n => {
+                n.style.display = "none";
+              });
+            }
+          });
+          nextThumbs[page.number] = canvas.toDataURL("image/jpeg", 0.72);
+        }
+
+        if (!cancelled) {
+          setPageThumbs(prev => {
+            const sameKeys = Object.keys(prev).length === Object.keys(nextThumbs).length &&
+              Object.keys(nextThumbs).every(k => prev[k] === nextThumbs[k]);
+            return sameKeys ? prev : nextThumbs;
+          });
+        }
+      } catch (err) {
+        console.error("Page thumbnail capture failed", err);
+      }
+    };
+
+    const timer = setTimeout(capture, 180);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [showPages, pageMeta]);
 
   const handleExport = async () => {
     if (loading) return;
@@ -2472,31 +2540,50 @@ export default function App() {
                             aspectRatio: "1 / 1.414",
                             background: "#ffffff",
                             border: `1px solid ${active ? "#93c5fd" : "#d9dfe6"}`,
-                            padding: "10px",
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "space-between",
+                            overflow: "hidden",
                             boxShadow: "0 8px 18px rgba(15,23,42,0.06)"
                           }}
                         >
-                          <div>
-                            <div style={{ fontSize: "10px", fontWeight: 700, color: active ? "#2563eb" : "#94a3b8", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "8px" }}>
-                              Page {page.number}
-                            </div>
-                            <div style={{ fontSize: "11px", fontWeight: 700, color: "#111827", lineHeight: 1.25, marginBottom: "8px" }}>
-                              {page.title}
-                            </div>
-                            <div style={{ display: "grid", gap: "4px" }}>
-                              {page.previewLines.slice(0, 4).map((line, idx) => (
-                                <div key={`${page.number}-${idx}`} style={{ fontSize: "9px", color: "#4b5563", lineHeight: 1.3 }}>
-                                  {line}
+                          {pageThumbs[page.number] ? (
+                            <img
+                              src={pageThumbs[page.number]}
+                              alt={`Page ${page.number}`}
+                              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                height: "100%",
+                                padding: "10px",
+                                display: "flex",
+                                flexDirection: "column",
+                                justifyContent: "space-between"
+                              }}
+                            >
+                              <div>
+                                <div style={{ fontSize: "10px", fontWeight: 700, color: active ? "#2563eb" : "#94a3b8", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "8px" }}>
+                                  Page {page.number}
                                 </div>
-                              ))}
+                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#111827", lineHeight: 1.25, marginBottom: "8px" }}>
+                                  {page.title}
+                                </div>
+                                <div style={{ display: "grid", gap: "4px" }}>
+                                  {page.previewLines.slice(0, 4).map((line, idx) => (
+                                    <div key={`${page.number}-${idx}`} style={{ fontSize: "9px", color: "#4b5563", lineHeight: 1.3 }}>
+                                      {line}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div style={{ fontSize: "9px", color: "#94a3b8", marginTop: "10px" }}>
+                                Rendering preview...
+                              </div>
                             </div>
-                          </div>
-                          <div style={{ fontSize: "9px", color: "#94a3b8", marginTop: "10px" }}>
-                            {page.rowCount} rows{page.hasFooter ? " • footer" : ""}
-                          </div>
+                          )}
+                        </div>
+                        <div style={{ fontSize: "10px", color: active ? UI.text : UI.muted, marginTop: "8px", display: "flex", justifyContent: "space-between", gap: "8px" }}>
+                          <span>Page {page.number}</span>
+                          <span>{page.rowCount} rows{page.hasFooter ? " • footer" : ""}</span>
                         </div>
                       </button>
                     );
