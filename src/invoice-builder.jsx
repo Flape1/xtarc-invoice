@@ -944,7 +944,82 @@ function SettingsDrawer({ inv, set, allCurrencies, onAddCurrency, onClose, onSav
       </div>
 
       <div style={{ padding: "18px", flex: 1 }}>
-        <Section title="Currency">
+        <Section title="Brand">
+          <Field l="Business name">
+            <Inp v={inv.agencyName || ""} c={v => set("agencyName", v)} ph="Your Business" />
+          </Field>
+
+          <Field l="Contact email">
+            <Inp v={inv.agencyEmail || ""} c={v => set("agencyEmail", v)} ph="hello@yourbusiness.com" />
+          </Field>
+
+          <Field l="Signatory">
+            <Inp v={inv.founderLabel || ""} c={v => set("founderLabel", v)} ph="Authorized Signatory" />
+          </Field>
+
+          <p style={{ fontSize: "12px", color: ui.muted, lineHeight: 1.6, margin: "0 0 12px" }}>
+            The logo is now editable directly on the invoice too. These controls are here as the default brand settings.
+          </p>
+
+          <div style={{
+            border: `1px solid ${ui.border}`,
+            background: ui.panelAlt,
+            padding: "14px",
+            marginBottom: "12px"
+          }}>
+            <img
+              src={inv.logoDataUrl}
+              alt="logo preview"
+              style={{ height: "52px", maxWidth: "100%", objectFit: "contain", display: "block", marginBottom: "12px" }}
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <button onClick={() => logoRef.current.click()} style={ghostBtn}>Upload Logo</button>
+              <button onClick={() => onSaveDefaultLogo("")} style={{ ...GBS("danger"), width: "100%", padding: "10px 12px", borderRadius: 0 }}>Reset Logo</button>
+            </div>
+          </div>
+
+          <input
+            ref={logoRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={e => handleLogoFile(e.target.files[0])}
+          />
+        </Section>
+
+        <Section title="Invoice">
+          <Field l="Status">
+            <Sel
+              v={inv.status || ""}
+              c={v => set("status", v)}
+              opts={[["", "None"], ["Draft", "Draft"], ["Sent", "Sent"], ["Paid", "Paid"], ["Overdue", "Overdue"]]}
+            />
+          </Field>
+
+          <Field l="Payment terms">
+            <textarea
+              value={inv.paymentTerms || ""}
+              onChange={e => set("paymentTerms", e.target.value)}
+              placeholder="Net 15, bank transfer, upfront deposit..."
+              style={{ ...iStyle, minHeight: "84px", resize: "vertical" }}
+              onFocus={onFoc}
+              onBlur={onBlr}
+            />
+          </Field>
+
+          <Field l="Notes">
+            <textarea
+              value={inv.notes || ""}
+              onChange={e => set("notes", e.target.value)}
+              placeholder="Footer notes..."
+              style={{ ...iStyle, minHeight: "84px", resize: "vertical" }}
+              onFocus={onFoc}
+              onBlur={onBlr}
+            />
+          </Field>
+        </Section>
+
+        <Section title="Money">
           <Field l="Active currency">
             <Sel
               v={inv.currency}
@@ -987,9 +1062,17 @@ function SettingsDrawer({ inv, set, allCurrencies, onAddCurrency, onClose, onSav
               Add Currency
             </button>
           </Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <Field l="Tax %">
+              <Inp v={inv.taxRate || ""} c={v => set("taxRate", v)} ph="e.g. 17" t="number" />
+            </Field>
+            <Field l="Discount %">
+              <Inp v={inv.discountRate || ""} c={v => set("discountRate", v)} ph="e.g. 10" t="number" />
+            </Field>
+          </div>
         </Section>
 
-        <Section title="Table Layout">
+        <Section title="Layout">
           <Field l="Column mode">
             <Sel
               v={inv.columnMode}
@@ -1020,58 +1103,7 @@ function SettingsDrawer({ inv, set, allCurrencies, onAddCurrency, onClose, onSav
           )}
         </Section>
 
-        <Section title="Totals">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-            <Field l="Tax %">
-              <Inp v={inv.taxRate || ""} c={v => set("taxRate", v)} ph="e.g. 17" t="number" />
-            </Field>
-            <Field l="Discount %">
-              <Inp v={inv.discountRate || ""} c={v => set("discountRate", v)} ph="e.g. 10" t="number" />
-            </Field>
-          </div>
-
-          <Field l="Status">
-            <Sel
-              v={inv.status || ""}
-              c={v => set("status", v)}
-              opts={[["", "None"], ["Draft", "Draft"], ["Sent", "Sent"], ["Paid", "Paid"], ["Overdue", "Overdue"]]}
-            />
-          </Field>
-        </Section>
-
-        <Section title="Branding">
-          <p style={{ fontSize: "12px", color: ui.muted, lineHeight: 1.6, margin: "0 0 12px" }}>
-            Upload a custom company logo for the invoice header.
-          </p>
-
-          <div style={{
-            border: `1px solid ${ui.border}`,
-            background: ui.panelAlt,
-            padding: "14px",
-            marginBottom: "12px"
-          }}>
-            <img
-              src={inv.logoDataUrl}
-              alt="logo preview"
-              style={{ height: "52px", maxWidth: "100%", objectFit: "contain", display: "block", marginBottom: "12px" }}
-            />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-              <button onClick={() => logoRef.current.click()} style={ghostBtn}>Upload Logo</button>
-              <button onClick={() => onSaveDefaultLogo("")} style={{ ...GBS("danger"), width: "100%", padding: "10px 12px", borderRadius: 0 }}>Reset Logo</button>
-            </div>
-          </div>
-
-          <input
-            ref={logoRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={e => handleLogoFile(e.target.files[0])}
-          />
-        </Section>
-
-
-        <Section title="Default Signature">
+        <Section title="Signature">
           <p style={{ fontSize: "12px", color: ui.muted, lineHeight: 1.6, margin: "0 0 12px" }}>
             Stored in your browser. Applied to every invoice by default.
           </p>
@@ -1455,7 +1487,7 @@ function paginateMeasured(items, heights, { firstAvail, firstLastAvail, middleAv
 }
 
 /* ─── INVOICE CANVAS ────────────────────────────────────────────────────── */
-function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
+function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange, onSaveDefaultLogo }) {
   const cur     = allCurrencies.find(c=>c.code===inv.currency) || allCurrencies[0];
   const sym     = cur ? cur.sym : inv.currency;
   const twoCol  = inv.columnMode === "2";
@@ -1480,6 +1512,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
     set(p=>{const a=[...p.items],si=a.findIndex(x=>x.id===sid),ti=a.findIndex(x=>x.id===tid);if(si<0||ti<0)return p;const[item]=a.splice(si,1);a.splice(ti,0,item);return{...p,items:a};});
   };
   const footerOrder = inv.footerOrder && inv.footerOrder.length ? inv.footerOrder : ["paymentTerms","notes"];
+  const logoInputRef = useRef(null);
   const moveFooterBlock = (key, dir) => set(p => {
     const order = [...(p.footerOrder && p.footerOrder.length ? p.footerOrder : ["paymentTerms","notes"])];
     const i = order.indexOf(key), j = i + dir;
@@ -1522,7 +1555,7 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
     const continuationHeight = continuationHeaderRef.current?.getBoundingClientRect().height || 52;
     const tableHeaderHeight = printTableHeaderRef.current?.getBoundingClientRect().height || 36;
     const footerHeight = printFooterRef.current?.getBoundingClientRect().height || 280;
-    const addRowHeight = 12;
+  const addRowHeight = 12;
 
     const nextPages = paginateMeasured(inv.items, rowHeights, {
       firstAvail: innerHeight - firstHeaderHeight - tableHeaderHeight - 4,
@@ -1715,7 +1748,39 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange }) {
           {pi===0 && <>
             <div ref={firstHeaderRef} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"48px"}}>
               <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-                <img src={inv.logoDataUrl || LOGO_B64} alt="logo" style={{height:"32px",width:"32px",objectFit:"contain",borderRadius:"4px"}}/>
+                <button
+                  data-noprint="1"
+                  onClick={() => logoInputRef.current?.click()}
+                  style={{
+                    border: `1px solid ${C.gray200}`,
+                    background: "#ffffff",
+                    padding: "6px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 6px 16px rgba(15,23,42,0.06)"
+                  }}
+                  title="Replace logo"
+                >
+                  <img src={inv.logoDataUrl || LOGO_B64} alt="logo" style={{height:"32px",width:"32px",objectFit:"contain",borderRadius:"4px"}}/>
+                </button>
+                <input
+                  ref={logoInputRef}
+                  data-noprint="1"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const r = new FileReader();
+                    r.onload = evt => onSaveDefaultLogo(evt.target.result);
+                    r.readAsDataURL(file);
+                    e.target.value = "";
+                  }}
+                />
                 <Editable value={inv.agencyName} onChange={v=>set(p=>({...p,agencyName:v}))}
                   placeholder="Agency name" style={{fontSize:"16px",fontWeight:600,color:C.gray900}}/>
               </div>
@@ -2363,21 +2428,39 @@ export default function App() {
             </div>
 
             <div className="topbar-actions" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <button onClick={() => setShowPages(v => !v)} style={{ ...GBS(showPages ? "dark" : "outline"), minWidth: "78px" }}>
+                Pane
+              </button>
+              <div style={{ width: "1px", height: "18px", background: UI.border, margin: "0 2px" }} />
               <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={{ ...GBS(canUndo ? "outline" : "ghost"), minWidth: "72px" }}>
                 Undo
               </button>
               <button onClick={redo} disabled={!canRedo} title="Redo" style={{ ...GBS(canRedo ? "outline" : "ghost"), minWidth: "72px" }}>
                 Redo
               </button>
-              <div style={{ width: "1px", height: "18px", background: UI.border, margin: "0 2px" }} />
-              <button onClick={() => setDark(v => !v)} style={{ ...GBS(dark ? "dark" : "outline"), minWidth: "78px" }}>
-                {dark ? "Light" : "Dark"}
-              </button>
               <button onClick={() => setShowTemplates(true)} style={{ ...GBS("outline"), minWidth: "88px" }}>
                 Templates
               </button>
-              <button onClick={() => setShowPages(v => !v)} style={{ ...GBS(showPages ? "dark" : "outline"), minWidth: "78px" }}>
-                Pane
+              <select
+                value={inv.currency}
+                onChange={e => setInv(p => ({ ...p, currency: e.target.value }))}
+                style={{
+                  ...GBS("outline"),
+                  minWidth: "94px",
+                  appearance: "none",
+                  paddingRight: "28px",
+                  backgroundImage: "linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%)",
+                  backgroundPosition: "calc(100% - 16px) calc(50% - 2px), calc(100% - 11px) calc(50% - 2px)",
+                  backgroundSize: "5px 5px, 5px 5px",
+                  backgroundRepeat: "no-repeat"
+                }}
+              >
+                {allCurrencies.map(c => (
+                  <option key={c.code} value={c.code}>{c.code}</option>
+                ))}
+              </select>
+              <button onClick={() => setDark(v => !v)} style={{ ...GBS(dark ? "dark" : "outline"), minWidth: "78px" }}>
+                {dark ? "Light" : "Dark"}
               </button>
               <button onClick={() => setShowSettings(s => !s)} style={{ ...GBS(showSettings ? "dark" : "outline"), minWidth: "84px" }}>
                 Settings
@@ -2608,6 +2691,7 @@ export default function App() {
                   allCurrencies={allCurrencies}
                   LOGO_B64={inv.logoDataUrl || assets.logo}
                   onPagesChange={setPageMeta}
+                  onSaveDefaultLogo={saveDefaultLogo}
                 />
               </MobileScaler>
             </div>
