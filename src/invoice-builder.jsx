@@ -2145,6 +2145,23 @@ export default function App() {
     document.head.appendChild(s);
   });
 
+  const waitForImages = async root => {
+    const images = Array.from(root.querySelectorAll("img"));
+    await Promise.all(images.map(img => {
+      if (img.complete && img.naturalWidth > 0) {
+        if (typeof img.decode === "function") {
+          return img.decode().catch(() => {});
+        }
+        return Promise.resolve();
+      }
+      return new Promise(resolve => {
+        const done = () => resolve();
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+      });
+    }));
+  };
+
   useEffect(() => {
     if (!showPages || !pageMeta.length) return;
 
@@ -2230,6 +2247,7 @@ export default function App() {
 
       // Wait for layout to settle
       await new Promise(r=>setTimeout(r,300));
+      await waitForImages(el);
 
       const sm={low:1.5,medium:2.5,high:3.5}, qm={low:0.65,medium:0.88,high:0.96};
       const scale=sm[inv.pdfQuality]||2.5, qual=qm[inv.pdfQuality]||0.88;
