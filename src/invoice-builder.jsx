@@ -1748,24 +1748,35 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange, onSav
           {pi===0 && <>
             <div ref={firstHeaderRef} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"48px"}}>
               <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-                <button
-                  data-noprint="1"
-                  onClick={() => logoInputRef.current?.click()}
+                <div
                   style={{
-                    border: `1px solid ${C.gray200}`,
-                    background: "#ffffff",
-                    padding: "6px",
-                    borderRadius: "8px",
-                    cursor: "pointer",
+                    position: "relative",
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    padding: "6px",
+                    borderRadius: "8px",
+                    border: `1px solid ${C.gray200}`,
+                    background: "#ffffff",
                     boxShadow: "0 6px 16px rgba(15,23,42,0.06)"
                   }}
-                  title="Replace logo"
                 >
                   <img src={inv.logoDataUrl || LOGO_B64} alt="logo" style={{height:"32px",width:"32px",objectFit:"contain",borderRadius:"4px"}}/>
-                </button>
+                  <button
+                    data-noprint="1"
+                    onClick={() => logoInputRef.current?.click()}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      border: "none",
+                      background: "transparent",
+                      cursor: "pointer",
+                      borderRadius: "8px"
+                    }}
+                    title="Replace logo"
+                    aria-label="Replace logo"
+                  />
+                </div>
                 <input
                   ref={logoInputRef}
                   data-noprint="1"
