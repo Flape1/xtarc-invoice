@@ -457,11 +457,13 @@ function FooterBlockEditor({
     editorRef.current.innerHTML = localHtml || "";
   }, [localHtml, focused]);
 
-  const syncValue = () => {
+  const syncValue = (normalize = false) => {
     if (!editorRef.current) return;
-    enforceRichStrongColor(editorRef.current);
-    const nextHtml = normalizeRichHtml(editorRef.current.innerHTML);
-    if (editorRef.current.innerHTML !== nextHtml) {
+    if (normalize) {
+      enforceRichStrongColor(editorRef.current);
+    }
+    const nextHtml = normalize ? normalizeRichHtml(editorRef.current.innerHTML) : editorRef.current.innerHTML;
+    if (normalize && editorRef.current.innerHTML !== nextHtml) {
       editorRef.current.innerHTML = nextHtml;
       enforceRichStrongColor(editorRef.current);
     }
@@ -489,8 +491,17 @@ function FooterBlockEditor({
     editorRef.current.focus();
     restoreSelection();
     document.execCommand(cmd, false);
-    syncValue();
+    syncValue(true);
     saveSelection();
+  };
+
+  const handleEditorKeyDown = e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      document.execCommand("insertLineBreak");
+      saveSelection();
+      syncValue(false);
+    }
   };
 
   const plainTextEmpty = !stripRichText(localHtml).trim();
@@ -557,8 +568,9 @@ function FooterBlockEditor({
           suppressContentEditableWarning
           spellCheck
           onFocus={() => { setFocused(true); saveSelection(); }}
-          onBlur={() => { setFocused(false); saveSelection(); syncValue(); }}
-          onInput={syncValue}
+          onBlur={() => { setFocused(false); saveSelection(); syncValue(true); }}
+          onInput={() => syncValue(false)}
+          onKeyDown={handleEditorKeyDown}
           onMouseUp={saveSelection}
           onKeyUp={saveSelection}
           style={{
