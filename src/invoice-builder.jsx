@@ -377,6 +377,24 @@ function normalizeRichHtml(v) {
     .replace(/<\/(i|em)>/gi, "</em>");
 }
 
+function enforceRichStrongColor(root) {
+  if (!root) return;
+  root.querySelectorAll("b, strong, span").forEach(node => {
+    const style = String(node.getAttribute("style") || "").toLowerCase();
+    const tag = node.tagName.toLowerCase();
+    const isBoldish =
+      tag === "b" ||
+      tag === "strong" ||
+      style.includes("font-weight: bold") ||
+      style.includes("font-weight:bold") ||
+      style.includes("font-weight: 700") ||
+      style.includes("font-weight:700");
+    if (!isBoldish) return;
+    node.style.color = "#18181b";
+    node.style.fontWeight = "700";
+  });
+}
+
 function stripRichText(v) {
   if (!v) return "";
   const tmp = document.createElement("div");
@@ -441,9 +459,11 @@ function FooterBlockEditor({
 
   const syncValue = () => {
     if (!editorRef.current) return;
+    enforceRichStrongColor(editorRef.current);
     const nextHtml = normalizeRichHtml(editorRef.current.innerHTML);
     if (editorRef.current.innerHTML !== nextHtml) {
       editorRef.current.innerHTML = nextHtml;
+      enforceRichStrongColor(editorRef.current);
     }
     setLocalHtml(nextHtml);
     onChange(nextHtml);
@@ -1880,15 +1900,20 @@ function InvoiceCanvas({ inv, set, allCurrencies, LOGO_B64, onPagesChange, onSav
                 <div style={{fontSize:"11px",fontWeight:600,color:C.gray400,letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:"6px"}}>
                   {key === "paymentTerms" ? "Payment Terms" : "Notes"}
                 </div>
-                <div style={{
-                  fontSize:"12px",
-                  color:key==="paymentTerms" ? C.gray500 : C.gray400,
-                  lineHeight:1.6,
-                  fontWeight:inv[`${key}Bold`] ? 700 : 400,
-                  fontStyle:inv[`${key}Italic`] ? "italic" : "normal"
-                }}>
-                  {key === "paymentTerms" ? (inv.paymentTerms || "") : (inv.notes || "")}
-                </div>
+                <div
+                  style={{
+                    fontSize:"12px",
+                    color:key==="paymentTerms" ? C.gray500 : C.gray400,
+                    lineHeight:1.6,
+                    fontStyle:inv[`${key}Italic`] ? "italic" : "normal",
+                    wordBreak:"break-word"
+                  }}
+                  dangerouslySetInnerHTML={{
+                    __html: normalizeRichHtml(
+                      toRichHtml(key === "paymentTerms" ? (inv.paymentTerms || "") : (inv.notes || ""))
+                    ) || "&nbsp;"
+                  }}
+                />
               </div>
             ))}
           </div>
