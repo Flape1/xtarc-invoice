@@ -421,7 +421,7 @@ function FooterBlockEditor({
         multiline
         style={{
           fontSize:"12px",
-          color:blockKey==="paymentTerms" ? C.gray500 : C.gray400,
+          color:bold ? C.gray900 : (blockKey==="paymentTerms" ? C.gray500 : C.gray400),
           lineHeight:1.6,
           fontWeight:bold ? 700 : 400,
           fontStyle:italic ? "italic" : "normal"
