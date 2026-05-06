@@ -344,6 +344,30 @@ function toolbarSelectStyle() {
   };
 }
 
+function looksLikeHtml(v) {
+  return /<[^>]+>/.test(String(v || ""));
+}
+
+function escapeHtml(v) {
+  return String(v || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function toRichHtml(v) {
+  if (!v) return "";
+  if (looksLikeHtml(v)) return v;
+  return escapeHtml(v).replace(/\n/g, "<br>");
+}
+
+function stripRichText(v) {
+  if (!v) return "";
+  const tmp = document.createElement("div");
+  tmp.innerHTML = String(v);
+  return tmp.textContent || tmp.innerText || "";
+}
+
 /* â”€â”€â”€ ROW TOOLBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function RowToolbar({ item, onDel, onDup, onMv, onChangeType, onBold, onItalic, canUp, canDown }) {
   return (
@@ -354,27 +378,27 @@ function RowToolbar({ item, onDel, onDup, onMv, onChangeType, onBold, onItalic, 
         ))}
       </select>
       <div style={toolbarDividerStyle()}/>
-      <button onClick={onBold} title="Bold" style={toolbarIconStyle(item.bold)}>B</button>
-      <button onClick={onItalic} title="Italic" style={{...toolbarIconStyle(item.italic),fontStyle:"italic"}}>I</button>
+      <button onMouseDown={e=>e.preventDefault()} onClick={onBold} title="Bold" style={toolbarIconStyle(item.bold)}>B</button>
+      <button onMouseDown={e=>e.preventDefault()} onClick={onItalic} title="Italic" style={{...toolbarIconStyle(item.italic),fontStyle:"italic"}}>I</button>
       <div style={toolbarDividerStyle()}/>
-      <button onClick={()=>onMv(-1)} disabled={!canUp} style={{...toolbarIconStyle(false),color:canUp?"#cbd5e1":"#475569",cursor:canUp?"pointer":"default"}}>?</button>
-      <button onClick={()=>onMv(1)} disabled={!canDown} style={{...toolbarIconStyle(false),color:canDown?"#cbd5e1":"#475569",cursor:canDown?"pointer":"default"}}>?</button>
+      <button onMouseDown={e=>e.preventDefault()} onClick={()=>onMv(-1)} disabled={!canUp} style={{...toolbarIconStyle(false),color:canUp?"#cbd5e1":"#475569",cursor:canUp?"pointer":"default",minWidth:"36px"}}>Up</button>
+      <button onMouseDown={e=>e.preventDefault()} onClick={()=>onMv(1)} disabled={!canDown} style={{...toolbarIconStyle(false),color:canDown?"#cbd5e1":"#475569",cursor:canDown?"pointer":"default",minWidth:"46px"}}>Down</button>
       <div style={toolbarDividerStyle()}/>
-      <button onClick={onDup} title="Duplicate" style={toolbarIconStyle(false)}>?</button>
-      <button onClick={onDel} title="Delete" style={toolbarIconStyle(false, true)}>×</button>
+      <button onMouseDown={e=>e.preventDefault()} onClick={onDup} title="Duplicate" style={{...toolbarIconStyle(false),minWidth:"42px"}}>Dup</button>
+      <button onMouseDown={e=>e.preventDefault()} onClick={onDel} title="Delete" style={{...toolbarIconStyle(false, true),minWidth:"42px"}}>Del</button>
     </div>
   );
 }
 function FooterBlockToolbar({ bold, italic, onBold, onItalic, onMove, canUp, canDown }) {
   return (
     <div style={toolbarShellStyle()}>
-      <span style={{color:"#94a3b8",fontSize:"12px",minWidth:"30px",height:"30px",display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"grab",userSelect:"none",border:"1px solid rgba(148,163,184,0.14)",borderRadius:"3px"}} draggable>=</span>
+      <span style={{color:"#94a3b8",fontSize:"11px",minWidth:"36px",height:"30px",display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"grab",userSelect:"none",border:"1px solid rgba(148,163,184,0.14)",borderRadius:"3px",fontWeight:600}} draggable>Move</span>
       <div style={toolbarDividerStyle()}/>
       <button onClick={onBold} title="Bold" style={toolbarIconStyle(bold)}>B</button>
       <button onClick={onItalic} title="Italic" style={{...toolbarIconStyle(italic),fontStyle:"italic"}}>I</button>
       <div style={toolbarDividerStyle()}/>
-      <button onClick={()=>onMove(-1)} disabled={!canUp} style={{...toolbarIconStyle(false),color:canUp?"#cbd5e1":"#475569",cursor:canUp?"pointer":"default"}}>?</button>
-      <button onClick={()=>onMove(1)} disabled={!canDown} style={{...toolbarIconStyle(false),color:canDown?"#cbd5e1":"#475569",cursor:canDown?"pointer":"default"}}>?</button>
+      <button onMouseDown={e=>e.preventDefault()} onClick={()=>onMove(-1)} disabled={!canUp} style={{...toolbarIconStyle(false),color:canUp?"#cbd5e1":"#475569",cursor:canUp?"pointer":"default",minWidth:"36px"}}>Up</button>
+      <button onMouseDown={e=>e.preventDefault()} onClick={()=>onMove(1)} disabled={!canDown} style={{...toolbarIconStyle(false),color:canDown?"#cbd5e1":"#475569",cursor:canDown?"pointer":"default",minWidth:"46px"}}>Down</button>
     </div>
   );
 }
@@ -384,6 +408,29 @@ function FooterBlockEditor({
   onDragStart, onDrop
 }) {
   const [hov, setHov] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const editorRef = useRef(null);
+  const htmlValue = toRichHtml(value);
+
+  useEffect(() => {
+    if (!editorRef.current || focused) return;
+    editorRef.current.innerHTML = htmlValue || "";
+  }, [htmlValue, focused]);
+
+  const syncValue = () => {
+    if (!editorRef.current) return;
+    onChange(editorRef.current.innerHTML);
+  };
+
+  const applyFormat = cmd => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand(cmd, false);
+    syncValue();
+  };
+
+  const plainTextEmpty = !stripRichText(htmlValue).trim();
+
   return (
     <div
       onMouseEnter={()=>setHov(true)}
@@ -400,10 +447,10 @@ function FooterBlockEditor({
         >
           <div draggable onDragStart={e=>onDragStart(e, blockKey)}>
             <FooterBlockToolbar
-              bold={bold}
-              italic={italic}
-              onBold={onBold}
-              onItalic={onItalic}
+              bold={false}
+              italic={false}
+              onBold={()=>applyFormat("bold")}
+              onItalic={()=>applyFormat("italic")}
               onMove={onMove}
               canUp={canUp}
               canDown={canDown}
@@ -414,19 +461,47 @@ function FooterBlockEditor({
       <div style={{fontSize:"11px",fontWeight:600,color:C.gray400,letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:"6px"}}>
         {title}
       </div>
-      <Editable
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        multiline
+      <div
+        className="editable-field"
         style={{
+          position:"relative",
           fontSize:"12px",
-          color:bold ? C.gray900 : (blockKey==="paymentTerms" ? C.gray500 : C.gray400),
+          color:blockKey==="paymentTerms" ? C.gray500 : C.gray400,
           lineHeight:1.6,
-          fontWeight:bold ? 700 : 400,
-          fontStyle:italic ? "italic" : "normal"
+          wordBreak:"break-word",
+          minHeight:"1.2em",
+          padding:"6px 8px",
+          borderRadius:"6px",
+          border:`1px solid ${focused ? C.accent : "transparent"}`,
+          background:focused ? C.white : "transparent",
+          boxShadow:focused ? "0 0 0 3px rgba(37,99,235,0.14)" : "none",
+          transition:"border-color 0.15s, background 0.15s, box-shadow 0.15s"
         }}
-      />
+        onMouseEnter={e=>{ if (!focused) { e.currentTarget.style.borderColor=C.gray300; e.currentTarget.style.background="#fcfcfd"; e.currentTarget.style.boxShadow="0 0 0 1px rgba(209,213,219,0.28)"; } }}
+        onMouseLeave={e=>{ if (!focused) { e.currentTarget.style.borderColor="transparent"; e.currentTarget.style.background="transparent"; e.currentTarget.style.boxShadow="none"; } }}
+      >
+        {plainTextEmpty && !focused && (
+          <span className="edit-placeholder" style={{opacity:0.35,fontWeight:400,fontStyle:"normal",color:C.gray400}}>
+            {placeholder}
+          </span>
+        )}
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          spellCheck
+          onFocus={() => setFocused(true)}
+          onBlur={() => { setFocused(false); syncValue(); }}
+          onInput={syncValue}
+          dangerouslySetInnerHTML={{ __html: htmlValue }}
+          style={{
+            outline:"none",
+            minHeight:"1.2em",
+            whiteSpace:"pre-wrap",
+            color:blockKey==="paymentTerms" ? C.gray500 : C.gray400
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -1046,7 +1121,7 @@ function SettingsDrawer({ inv, set, allCurrencies, onAddCurrency, onClose, onSav
 
           <Field l="Payment terms">
             <textarea
-              value={inv.paymentTerms || ""}
+              value={stripRichText(inv.paymentTerms || "")}
               onChange={e => set("paymentTerms", e.target.value)}
               placeholder="Net 15, bank transfer, upfront deposit..."
               style={{ ...iStyle, minHeight: "84px", resize: "vertical" }}
@@ -1057,7 +1132,7 @@ function SettingsDrawer({ inv, set, allCurrencies, onAddCurrency, onClose, onSav
 
           <Field l="Notes">
             <textarea
-              value={inv.notes || ""}
+              value={stripRichText(inv.notes || "")}
               onChange={e => set("notes", e.target.value)}
               placeholder="Footer notes..."
               style={{ ...iStyle, minHeight: "84px", resize: "vertical" }}
