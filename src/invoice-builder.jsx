@@ -442,6 +442,9 @@ function FooterBlockEditor({
   const syncValue = () => {
     if (!editorRef.current) return;
     const nextHtml = normalizeRichHtml(editorRef.current.innerHTML);
+    if (editorRef.current.innerHTML !== nextHtml) {
+      editorRef.current.innerHTML = nextHtml;
+    }
     setLocalHtml(nextHtml);
     onChange(nextHtml);
   };
@@ -466,8 +469,8 @@ function FooterBlockEditor({
     editorRef.current.focus();
     restoreSelection();
     document.execCommand(cmd, false);
-    saveSelection();
     syncValue();
+    saveSelection();
   };
 
   const plainTextEmpty = !stripRichText(localHtml).trim();
