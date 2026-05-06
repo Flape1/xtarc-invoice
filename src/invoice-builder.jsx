@@ -344,6 +344,13 @@ function toolbarSelectStyle() {
   };
 }
 
+function richTextStrongStyle(color = C.gray900) {
+  return {
+    color,
+    fontWeight: 700
+  };
+}
+
 function looksLikeHtml(v) {
   return /<[^>]+>/.test(String(v || ""));
 }
@@ -359,6 +366,15 @@ function toRichHtml(v) {
   if (!v) return "";
   if (looksLikeHtml(v)) return v;
   return escapeHtml(v).replace(/\n/g, "<br>");
+}
+
+function normalizeRichHtml(v) {
+  if (!v) return "";
+  return String(v)
+    .replace(/<(b|strong)([^>]*)>/gi, '<strong style="color:#18181b;font-weight:700;">')
+    .replace(/<\/(b|strong)>/gi, "</strong>")
+    .replace(/<(i|em)([^>]*)>/gi, "<em>")
+    .replace(/<\/(i|em)>/gi, "</em>");
 }
 
 function stripRichText(v) {
@@ -411,7 +427,7 @@ function FooterBlockEditor({
   const [focused, setFocused] = useState(false);
   const editorRef = useRef(null);
   const selectionRef = useRef(null);
-  const htmlValue = toRichHtml(value);
+  const htmlValue = normalizeRichHtml(toRichHtml(value));
 
   useEffect(() => {
     if (!editorRef.current || focused) return;
@@ -420,7 +436,7 @@ function FooterBlockEditor({
 
   const syncValue = () => {
     if (!editorRef.current) return;
-    onChange(editorRef.current.innerHTML);
+    onChange(normalizeRichHtml(editorRef.current.innerHTML));
   };
 
   const saveSelection = () => {
