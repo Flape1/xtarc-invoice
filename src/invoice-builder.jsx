@@ -428,15 +428,22 @@ function FooterBlockEditor({
   const editorRef = useRef(null);
   const selectionRef = useRef(null);
   const htmlValue = normalizeRichHtml(toRichHtml(value));
+  const [localHtml, setLocalHtml] = useState(htmlValue);
+
+  useEffect(() => {
+    setLocalHtml(htmlValue);
+  }, [htmlValue]);
 
   useEffect(() => {
     if (!editorRef.current || focused) return;
-    editorRef.current.innerHTML = htmlValue || "";
-  }, [htmlValue, focused]);
+    editorRef.current.innerHTML = localHtml || "";
+  }, [localHtml, focused]);
 
   const syncValue = () => {
     if (!editorRef.current) return;
-    onChange(normalizeRichHtml(editorRef.current.innerHTML));
+    const nextHtml = normalizeRichHtml(editorRef.current.innerHTML);
+    setLocalHtml(nextHtml);
+    onChange(nextHtml);
   };
 
   const saveSelection = () => {
@@ -463,7 +470,7 @@ function FooterBlockEditor({
     syncValue();
   };
 
-  const plainTextEmpty = !stripRichText(htmlValue).trim();
+  const plainTextEmpty = !stripRichText(localHtml).trim();
 
   return (
     <div
@@ -531,7 +538,6 @@ function FooterBlockEditor({
           onInput={syncValue}
           onMouseUp={saveSelection}
           onKeyUp={saveSelection}
-          dangerouslySetInnerHTML={{ __html: htmlValue }}
           style={{
             outline:"none",
             minHeight:"1.2em",
