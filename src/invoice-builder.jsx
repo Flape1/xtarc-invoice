@@ -503,6 +503,8 @@ function FooterBlockEditor({
           color:blockKey==="paymentTerms" ? C.gray500 : C.gray400,
           lineHeight:1.6,
           wordBreak:"break-word",
+          textAlign:"left",
+          direction:"ltr",
           minHeight:"1.2em",
           padding:"6px 8px",
           borderRadius:"6px",
@@ -534,7 +536,10 @@ function FooterBlockEditor({
             outline:"none",
             minHeight:"1.2em",
             whiteSpace:"pre-wrap",
-            color:blockKey==="paymentTerms" ? C.gray500 : C.gray400
+            color:blockKey==="paymentTerms" ? C.gray500 : C.gray400,
+            textAlign:"left",
+            direction:"ltr",
+            unicodeBidi:"plaintext"
           }}
         />
       </div>
