@@ -394,8 +394,8 @@ function FooterBlockToolbar({ bold, italic, onBold, onItalic, onMove, canUp, can
     <div style={toolbarShellStyle()}>
       <span style={{color:"#94a3b8",fontSize:"11px",minWidth:"36px",height:"30px",display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"grab",userSelect:"none",border:"1px solid rgba(148,163,184,0.14)",borderRadius:"3px",fontWeight:600}} draggable>Move</span>
       <div style={toolbarDividerStyle()}/>
-      <button onClick={onBold} title="Bold" style={toolbarIconStyle(bold)}>B</button>
-      <button onClick={onItalic} title="Italic" style={{...toolbarIconStyle(italic),fontStyle:"italic"}}>I</button>
+      <button onMouseDown={e=>e.preventDefault()} onClick={onBold} title="Bold" style={toolbarIconStyle(bold)}>B</button>
+      <button onMouseDown={e=>e.preventDefault()} onClick={onItalic} title="Italic" style={{...toolbarIconStyle(italic),fontStyle:"italic"}}>I</button>
       <div style={toolbarDividerStyle()}/>
       <button onMouseDown={e=>e.preventDefault()} onClick={()=>onMove(-1)} disabled={!canUp} style={{...toolbarIconStyle(false),color:canUp?"#cbd5e1":"#475569",cursor:canUp?"pointer":"default",minWidth:"36px"}}>Up</button>
       <button onMouseDown={e=>e.preventDefault()} onClick={()=>onMove(1)} disabled={!canDown} style={{...toolbarIconStyle(false),color:canDown?"#cbd5e1":"#475569",cursor:canDown?"pointer":"default",minWidth:"46px"}}>Down</button>
@@ -410,6 +410,7 @@ function FooterBlockEditor({
   const [hov, setHov] = useState(false);
   const [focused, setFocused] = useState(false);
   const editorRef = useRef(null);
+  const selectionRef = useRef(null);
   const htmlValue = toRichHtml(value);
 
   useEffect(() => {
@@ -422,10 +423,27 @@ function FooterBlockEditor({
     onChange(editorRef.current.innerHTML);
   };
 
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !editorRef.current) return;
+    const range = sel.getRangeAt(0);
+    if (!editorRef.current.contains(range.commonAncestorContainer)) return;
+    selectionRef.current = range.cloneRange();
+  };
+
+  const restoreSelection = () => {
+    const sel = window.getSelection();
+    if (!sel || !selectionRef.current) return;
+    sel.removeAllRanges();
+    sel.addRange(selectionRef.current);
+  };
+
   const applyFormat = cmd => {
     if (!editorRef.current) return;
     editorRef.current.focus();
+    restoreSelection();
     document.execCommand(cmd, false);
+    saveSelection();
     syncValue();
   };
 
@@ -490,9 +508,11 @@ function FooterBlockEditor({
           contentEditable
           suppressContentEditableWarning
           spellCheck
-          onFocus={() => setFocused(true)}
-          onBlur={() => { setFocused(false); syncValue(); }}
+          onFocus={() => { setFocused(true); saveSelection(); }}
+          onBlur={() => { setFocused(false); saveSelection(); syncValue(); }}
           onInput={syncValue}
+          onMouseUp={saveSelection}
+          onKeyUp={saveSelection}
           dangerouslySetInnerHTML={{ __html: htmlValue }}
           style={{
             outline:"none",
