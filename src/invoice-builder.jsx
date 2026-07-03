@@ -9,8 +9,8 @@ const C = {
 };
 
 const BASE_CURRENCIES = [
-  {code:"PKR",sym:"PKR"},{code:"USD",sym:"$"},{code:"EUR",sym:"â‚¬"},
-  {code:"GBP",sym:"Â£"},{code:"AED",sym:"AED"},{code:"SAR",sym:"SAR"},
+  {code:"PKR",sym:"PKR"},{code:"USD",sym:"$"},{code:"EUR",sym:"€"},
+  {code:"GBP",sym:"£"},{code:"AED",sym:"AED"},{code:"SAR",sym:"SAR"},
   {code:"CAD",sym:"CA$"},{code:"AUD",sym:"A$"},
 ];
 
